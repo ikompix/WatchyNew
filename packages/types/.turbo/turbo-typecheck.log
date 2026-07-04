@@ -1,0 +1,4 @@
+
+> @watchy/types@0.0.1 typecheck /Users/tomdebout/Desktop/watchy/packages/types
+> tsc --noEmit
+

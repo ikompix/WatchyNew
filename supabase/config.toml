@@ -1,0 +1,35 @@
+# Config auth du projet Supabase WatchyNew (ahjbfjrauwarxlvzwcnq).
+# Appliquer avec : supabase config push
+# On ne déclare que la section [auth] : c'est la seule gérée via ce fichier.
+project_id = "watchy"
+
+[auth]
+# URLs de retour OAuth autorisées : scheme natif (dev build) + Expo Go (exp://<ip>:8081/--/auth-callback)
+additional_redirect_urls = ["watchy://auth-callback", "exp://**"]
+# Valeurs distantes épinglées : `config push` pousse TOUTE la section [auth],
+# les champs omis seraient écrasés par les défauts locaux de la CLI.
+site_url = "http://localhost:3000"
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+# Sign in with Apple — flux natif signInWithIdToken : pas de secret, seule
+# l'audience du jeton est vérifiée (Expo Go = host.exp.Exponent, dev build = bundle id).
+[auth.external.apple]
+enabled = true
+client_id = "host.exp.Exponent,com.tomdebout.watchy"
+
+# Google OAuth — client de type « Application Web » dans Google Cloud Console,
+# URI de redirection : https://ahjbfjrauwarxlvzwcnq.supabase.co/auth/v1/callback
+# Pousser avec les variables d'env définies :
+#   SUPABASE_AUTH_GOOGLE_CLIENT_ID=… SUPABASE_AUTH_GOOGLE_SECRET=… supabase config push
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"

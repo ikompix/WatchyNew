@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.expo
+**/.expo
+dist
+**/dist
+.git
+**/*.env
+apps/mobile/ios
+apps/mobile/android

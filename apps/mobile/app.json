@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "watchy",
+    "slug": "watchy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "watchy",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.tomdebout.watchy",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.tomdebout.watchy",
+      "adaptiveIcon": {
+        "backgroundColor": "#eef1f5",
+        "foregroundImage": "./assets/images/watchy-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Watchy utilise vos photos pour ajouter des montres à votre collection.",
+          "cameraPermission": "Watchy utilise la caméra pour photographier vos montres."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Watchy utilise la caméra pour photographier vos montres."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#eef1f5",
+          "android": {
+            "image": "./assets/images/watchy-icon.png",
+            "imageWidth": 96
+          }
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "expo-apple-authentication"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

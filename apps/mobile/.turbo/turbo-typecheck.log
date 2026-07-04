@@ -1,0 +1,4 @@
+
+> @watchy/mobile@1.0.0 typecheck /Users/tomdebout/Desktop/watchy/apps/mobile
+> tsc --noEmit
+

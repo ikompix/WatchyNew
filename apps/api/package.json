@@ -1,0 +1,38 @@
+{
+  "name": "@watchy/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "tsx --env-file=.env src/db/seed.ts",
+    "market:refresh": "tsx --env-file=.env src/db/market-refresh.ts",
+    "catalog:enrich": "tsx --env-file=.env src/db/photo-backfill.ts",
+    "catalog:nicknames": "tsx --env-file=.env src/db/nicknames.ts",
+    "alerts:check": "tsx --env-file=.env src/db/alerts-check.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
+    "@hono/node-server": "^1.13.0",
+    "@supabase/supabase-js": "^2.50.0",
+    "@watchy/types": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "hono": "^4.7.0",
+    "postgres": "^3.4.0",
+    "ws": "^8.21.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.0",
+    "typescript": "~6.0.3"
+  }
+}

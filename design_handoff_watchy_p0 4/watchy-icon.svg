@@ -1,0 +1,50 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Watchy app icon">
+  <defs>
+    
+    <radialGradient id="wBody" cx="32%" cy="24%" r="95%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="58%" stop-color="#f2f4f8"></stop>
+      <stop offset="100%" stop-color="#d3d9e2"></stop>
+    </radialGradient>
+    
+    <radialGradient id="wDial" cx="38%" cy="30%" r="82%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="74%" stop-color="#c8cfda"></stop>
+      <stop offset="100%" stop-color="#bcc4d0"></stop>
+    </radialGradient>
+    
+    <linearGradient id="wSheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"></stop>
+      <stop offset="100%" stop-color="#a7b0be" stop-opacity="0.25"></stop>
+    </linearGradient>
+    <filter id="wDrop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="34" stdDeviation="40" flood-color="#3a4a68" flood-opacity="0.32"></feDropShadow>
+    </filter>
+    <filter id="wDialShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#7c889c" flood-opacity="0.45"></feDropShadow>
+    </filter>
+  </defs>
+
+  
+  <g filter="url(#wDrop)">
+    <path d="M512 80&#xA;             C 244 80, 80 244, 80 512&#xA;             C 80 780, 244 944, 512 944&#xA;             C 780 944, 944 780, 944 512&#xA;             C 944 244, 780 80, 512 80 Z" fill="url(#wBody)"></path>
+    <path d="M512 80&#xA;             C 244 80, 80 244, 80 512&#xA;             C 80 780, 244 944, 512 944&#xA;             C 780 944, 944 780, 944 512&#xA;             C 944 244, 780 80, 512 80 Z" fill="url(#wSheen)" fill-opacity="0.5"></path>
+  </g>
+
+  
+  <g filter="url(#wDialShadow)">
+    <circle cx="512" cy="512" r="238" fill="url(#wDial)"></circle>
+  </g>
+  <circle cx="512" cy="512" r="238" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2"></circle>
+  
+  <circle cx="512" cy="512" r="176" fill="none" stroke="#3c506e" stroke-opacity="0.10" stroke-width="2"></circle>
+
+  
+  
+  <line x1="512" y1="512" x2="614" y2="400" stroke="#3f6389" stroke-width="10" stroke-linecap="round"></line>
+  
+  <line x1="512" y1="512" x2="332" y2="424" stroke="#1b2531" stroke-width="10" stroke-linecap="round"></line>
+  
+  <circle cx="512" cy="512" r="17" fill="#5b7fa6"></circle>
+  <circle cx="512" cy="512" r="17" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2"></circle>
+</svg>

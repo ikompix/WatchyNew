@@ -1,0 +1,33 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Watchy app icon (full bleed)">
+  <defs>
+    <radialGradient id="wBody" cx="32%" cy="24%" r="105%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="58%" stop-color="#eef1f6"></stop>
+      <stop offset="100%" stop-color="#cfd6e0"></stop>
+    </radialGradient>
+    <radialGradient id="wDial" cx="38%" cy="30%" r="82%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="74%" stop-color="#c8cfda"></stop>
+      <stop offset="100%" stop-color="#bcc4d0"></stop>
+    </radialGradient>
+    <filter id="wDialShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#7c889c" flood-opacity="0.45"></feDropShadow>
+    </filter>
+  </defs>
+
+  
+  <rect width="1024" height="1024" fill="url(#wBody)"></rect>
+
+  
+  <g filter="url(#wDialShadow)">
+    <circle cx="512" cy="512" r="270" fill="url(#wDial)"></circle>
+  </g>
+  <circle cx="512" cy="512" r="270" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2"></circle>
+  <circle cx="512" cy="512" r="200" fill="none" stroke="#3c506e" stroke-opacity="0.10" stroke-width="2"></circle>
+
+  
+  <line x1="512" y1="512" x2="628" y2="384" stroke="#3f6389" stroke-width="11" stroke-linecap="round"></line>
+  <line x1="512" y1="512" x2="308" y2="412" stroke="#1b2531" stroke-width="11" stroke-linecap="round"></line>
+  <circle cx="512" cy="512" r="18" fill="#5b7fa6"></circle>
+  <circle cx="512" cy="512" r="18" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2"></circle>
+</svg>

@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    # Dev : watch + rechargement (le Dockerfile est en mode prod par défaut)
+    command: ["pnpm", "dev"]
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./apps/api/.env
+    volumes:
+      - ./apps/api/src:/workspace/apps/api/src
+      - ./packages/types/src:/workspace/packages/types/src
+    restart: unless-stopped
+
+  mobile:
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile
+    ports:
+      - "8081:8081"
+      - "19000:19000"
+      - "19001:19001"
+    env_file:
+      - ./apps/mobile/.env
+    environment:
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+    volumes:
+      - ./apps/mobile/src:/workspace/apps/mobile/src
+      - ./packages/types/src:/workspace/packages/types/src
+    restart: unless-stopped

@@ -1,0 +1,4 @@
+
+> @watchy/api@1.0.0 typecheck /Users/tomdebout/Desktop/watchy/apps/api
+> tsc --noEmit
+
