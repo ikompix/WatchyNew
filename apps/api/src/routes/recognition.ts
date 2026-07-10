@@ -7,8 +7,8 @@ import { authMiddleware } from '../middleware/auth.js';
 import { countScansThisMonth, FREE_SCANS_PER_MONTH, getPlan } from '../lib/entitlements.js';
 import { sniffImageMime, uploadWatchPhoto } from '../lib/storage.js';
 import { identifyWatch } from '../lib/recognition.js';
+import { getLocale } from '../lib/locale.js';
 import { refreshInBackground } from '../lib/market-research.js';
-import { enrichModelInBackground } from '../lib/model-photo.js';
 import type { ApiResponse, RecognizeWatchResult, WatchModel } from '@watchy/types';
 
 const router = new Hono<{ Variables: { userId: string } }>();
@@ -95,7 +95,7 @@ router.post('/', async (c) => {
   try {
     // Le quota compte les tentatives réelles (l'appel IA est facturé même s'il échoue ensuite)
     await db.insert(recognitionEvents).values({ userId });
-    identification = await identifyWatch(imageBase64, mimeType);
+    identification = await identifyWatch(imageBase64, mimeType, userId, getLocale(c));
   } catch (err) {
     // Recognition is best-effort — the photo is already stored, the user falls back to manual entry
     console.error('Recognition failed:', err);
@@ -111,6 +111,7 @@ router.post('/', async (c) => {
         model: null,
         reference: null,
         dialColor: null,
+        nickname: null,
         referenceCandidates: [],
         matched: null,
         alternatives: [],
@@ -149,7 +150,7 @@ router.post('/', async (c) => {
   alternatives = alternatives.filter((a) => !seen.has(a.id) && (seen.add(a.id), true)).slice(0, 4);
 
   // Identification confiante hors catalogue → le modèle exact rejoint le catalogue
-  // (croissance organique) et sa cote part en recherche immédiatement
+  // (croissance organique, surnom inclus) et sa cote part en recherche immédiatement
   if (!matched && identification.confidence >= 0.5 && identification.brand && identification.model) {
     const canonicalName = [identification.brand, identification.model, identification.reference]
       .filter(Boolean)
@@ -160,13 +161,31 @@ router.post('/', async (c) => {
         brand: identification.brand,
         model: identification.model,
         reference: identification.reference,
+        nickname: identification.nickname,
         canonicalName,
       })
       .returning();
     matched = created as unknown as WatchModel;
     console.log(`[recognition] catalogue enrichi: ${canonicalName}`);
     refreshInBackground(created.id);
-    enrichModelInBackground(created.id);
+  }
+
+  // Le modèle matché n'a pas encore de surnom mais l'IA en reconnaît un
+  // (et la référence concorde) → backfill, la reco devient la source des surnoms
+  if (
+    matched?.id &&
+    !matched.nickname &&
+    identification.nickname &&
+    matched.reference &&
+    identification.reference &&
+    matched.reference.toLowerCase() === identification.reference.toLowerCase()
+  ) {
+    await db
+      .update(watchModels)
+      .set({ nickname: identification.nickname, updatedAt: new Date() })
+      .where(eq(watchModels.id, matched.id));
+    matched = { ...matched, nickname: identification.nickname };
+    console.log(`[recognition] surnom appris: ${matched.canonicalName} → « ${identification.nickname} »`);
   }
 
   return c.json<ApiResponse<RecognizeWatchResult>>({
@@ -178,6 +197,7 @@ router.post('/', async (c) => {
       model: identification.model,
       reference: identification.reference,
       dialColor: identification.dialColor,
+      nickname: identification.nickname,
       referenceCandidates: identification.referenceCandidates,
       matched: matched ?? null,
       alternatives,

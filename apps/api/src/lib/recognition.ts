@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
+import { UsageTracker } from './ai-usage.js';
+import type { Locale } from './locale.js';
 
 const identificationSchema = z.object({
   isWatch: z.boolean(),
@@ -7,6 +9,7 @@ const identificationSchema = z.object({
   model: z.string().nullable(),
   reference: z.string().nullable(),
   dialColor: z.string().nullable(),
+  nickname: z.string().nullable(),
   referenceCandidates: z.array(
     z.object({
       reference: z.string(),
@@ -19,7 +22,11 @@ const identificationSchema = z.object({
 
 export type WatchIdentification = z.infer<typeof identificationSchema>;
 
-const OUTPUT_SCHEMA = {
+// Textes libres (couleur de cadran, indices visuels) produits dans la langue
+// de l'utilisateur — le reste (marque, modèle, référence) est factuel.
+const LANGUAGE_NAME: Record<Locale, string> = { fr: 'French', en: 'English' };
+
+const outputSchema = (locale: Locale) => ({
   type: 'object',
   properties: {
     isWatch: {
@@ -40,7 +47,12 @@ const OUTPUT_SCHEMA = {
     },
     dialColor: {
       anyOf: [{ type: 'string' }, { type: 'null' }],
-      description: 'Dial color as seen in the photo, in French, precise if possible (e.g. "vert menthe", "bleu soleillé", "noir mat"). Null if not clearly visible. The dial color strongly affects market value.',
+      description: `Dial color as seen in the photo, in ${LANGUAGE_NAME[locale]}, precise if possible (e.g. ${locale === 'fr' ? '"vert menthe", "bleu soleillé", "noir mat"' : '"mint green", "sunburst blue", "matte black"'}). Null if not clearly visible. The dial color strongly affects market value.`,
+    },
+    nickname: {
+      anyOf: [{ type: 'string' }, { type: 'null' }],
+      description:
+        'Widely established collector nickname for the EXACT identified reference (e.g. "Batman" for GMT-Master II 126710BLNR, "Hulk" for Submariner 116610LV, "Pepsi", "Panda"). Collectors identify watches by these nicknames, so it is highly valuable — but NEVER invent one: null unless the nickname is genuinely well-known for this precise reference.',
     },
     referenceCandidates: {
       type: 'array',
@@ -52,7 +64,7 @@ const OUTPUT_SCHEMA = {
           label: { type: 'string', description: 'Short variant name (e.g. "Submariner no-date 41mm")' },
           cue: {
             type: 'string',
-            description: 'The visual cue that distinguishes this variant, in French (e.g. "pas de guichet date")',
+            description: `The visual cue that distinguishes this variant, in ${LANGUAGE_NAME[locale]} (e.g. ${locale === 'fr' ? '"pas de guichet date"' : '"no date window"'})`,
           },
         },
         required: ['reference', 'label', 'cue'],
@@ -64,9 +76,9 @@ const OUTPUT_SCHEMA = {
       description: 'Confidence in the brand+model identification, from 0 to 1',
     },
   },
-  required: ['isWatch', 'brand', 'model', 'reference', 'dialColor', 'referenceCandidates', 'confidence'],
+  required: ['isWatch', 'brand', 'model', 'reference', 'dialColor', 'nickname', 'referenceCandidates', 'confidence'],
   additionalProperties: false,
-} as const;
+});
 
 let client: Anthropic | null = null;
 
@@ -76,17 +88,20 @@ export function recognitionAvailable(): boolean {
 
 export async function identifyWatch(
   imageBase64: string,
-  mimeType: 'image/jpeg' | 'image/png' | 'image/webp'
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp',
+  userId: string | null = null,
+  locale: Locale = 'fr'
 ): Promise<WatchIdentification | null> {
   if (!recognitionAvailable()) return null;
   client ??= new Anthropic();
 
   const startedAt = Date.now();
+  const usage = new UsageTracker('reco photo', 'claude-opus-4-8', userId);
   const response = await client.messages.create({
     model: 'claude-opus-4-8',
     max_tokens: 2048,
     thinking: { type: 'adaptive' },
-    output_config: { format: { type: 'json_schema', schema: OUTPUT_SCHEMA } },
+    output_config: { format: { type: 'json_schema', schema: outputSchema(locale) } },
     messages: [
       {
         role: 'user',
@@ -99,7 +114,9 @@ export async function identifyWatch(
             type: 'text',
             text: `Identify the watch in this photo. Report the brand and model/collection name.
 
-For the reference: it is rarely printed on the watch, so infer it from visible cues — date window (present/absent, cyclops), bezel type and color, dial color and indices, case size relative to the wrist, bracelet style, material, generation details (lug holes, clasp). The reference determines market value, so be precise: if a single reference is clearly the best fit, give it; if 2-3 variants remain plausible (e.g. date vs no-date, current vs previous generation), give the most likely in "reference" AND list them in "referenceCandidates" with the visual cue (in French) that would let the owner confirm which one they have.
+For the reference: it is rarely printed on the watch, so infer it from visible cues — date window (present/absent, cyclops), bezel type and color, dial color and indices, case size relative to the wrist, bracelet style, material, generation details (lug holes, clasp). The reference determines market value, so be precise: if a single reference is clearly the best fit, give it; if 2-3 variants remain plausible (e.g. date vs no-date, current vs previous generation), give the most likely in "reference" AND list them in "referenceCandidates" with the visual cue (in ${LANGUAGE_NAME[locale]}) that would let the owner confirm which one they have.
+
+If the identified reference has a widely established collector nickname (Batman, Hulk, Pepsi, Panda…), report it — collectors identify watches this way. Never invent one.
 
 Be honest about your confidence: use a low value when the dial or case details are ambiguous.`,
           },
@@ -107,6 +124,9 @@ Be honest about your confidence: use a low value when the dial or case details a
       },
     ],
   });
+
+  usage.add(response.usage);
+  usage.log();
 
   if (response.stop_reason === 'refusal') {
     console.warn(`[recognition] refused after ${Date.now() - startedAt}ms`);

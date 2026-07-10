@@ -16,6 +16,7 @@ import type { Session } from '@supabase/supabase-js';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { supabase } from '@/lib/supabase';
 import { getOnboarded } from '@/lib/onboarding';
+import { loadLocaleOverride } from '@/lib/i18n';
 import { initPurchasesListener } from '@/lib/purchases';
 import { Brand } from '@/constants/theme';
 
@@ -52,10 +53,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       router.replace('/(onboarding)');
     } else if (session && (inAuth || atRoot)) {
       // Connexion faite : continuer le parcours si pas encore terminé
-      router.replace(onboarded ? '/(app)/collection' : '/(onboarding)/camera');
+      router.replace(onboarded ? '/(app)/collection' : '/(onboarding)/source');
     }
     // session && inOnboarding : le parcours avance tout seul, ne pas interférer
-  }, [session, onboarded, segments]);
+  }, [session, onboarded, segments, router]);
 
   return <>{children}</>;
 }
@@ -69,9 +70,15 @@ export default function RootLayout() {
     IBMPlexMono_400Regular,
   });
 
+  // Locale chargée avant de cacher le splash — pas de flash de langue au premier rendu
+  const [localeReady, setLocaleReady] = useState(false);
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    loadLocaleOverride().finally(() => setLocaleReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && localeReady) SplashScreen.hideAsync();
+  }, [fontsLoaded, localeReady]);
 
   // Achats/renouvellements détectés par le SDK RevenueCat → rafraîchir les
   // données dépendantes du plan sans attendre le webhook serveur
@@ -82,7 +89,7 @@ export default function RootLayout() {
     });
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !localeReady) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -115,6 +122,17 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="profile-edit"
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              headerTransparent: true,
+              headerTitle: '',
+              headerBackButtonDisplayMode: 'minimal',
+              headerTintColor: Brand.ink,
+            }}
+          />
+          <Stack.Screen
             name="watch/add"
             options={{
               presentation: 'fullScreenModal',
@@ -124,6 +142,17 @@ export default function RootLayout() {
           <Stack.Screen
             name="watch/[id]/index"
             options={{
+              headerShown: true,
+              headerTransparent: true,
+              headerTitle: '',
+              headerBackButtonDisplayMode: 'minimal',
+              headerTintColor: Brand.ink,
+            }}
+          />
+          <Stack.Screen
+            name="watch/[id]/edit"
+            options={{
+              presentation: 'modal',
               headerShown: true,
               headerTransparent: true,
               headerTitle: '',

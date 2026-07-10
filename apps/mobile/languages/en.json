@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Watchy uses the camera to photograph your watches.",
+    "NSPhotoLibraryUsageDescription": "Watchy uses your photos to add watches to your collection.",
+    "NSMicrophoneUsageDescription": "Watchy does not record audio; this permission comes with camera usage."
+  }
+}

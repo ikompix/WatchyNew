@@ -10,13 +10,16 @@ import { supabase } from '@/lib/supabase';
 import { isGuestEmail } from '@/lib/onboarding';
 import { presentCustomerCenter, restorePurchases } from '@/lib/purchases';
 import { apiDelete, unwrap } from '@/lib/api-client';
+import { apiErrorMessage } from '@/lib/premium-gate';
 import { useMe } from '@/hooks/use-entitlement';
 import { Brand, CardGap, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useLocaleStore, useT, type LocaleOverride } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
 
 export default function Profile() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const qc = useQueryClient();
@@ -35,28 +38,35 @@ export default function Profile() {
 
   // Exigence App Store 5.1.1(v) : suppression du compte in-app, définitive
   function handleDeleteAccount() {
-    Alert.alert(
-      'Supprimer mon compte',
-      'Votre compte, votre collection, vos photos et votre wishlist seront définitivement effacés. Cette action est irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer définitivement',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              unwrap(await apiDelete<{ deleted: true }>('/me'));
-              await supabase.auth.signOut();
-            } catch (err) {
-              Alert.alert(
-                'Suppression impossible',
-                err instanceof Error ? err.message : 'Réessayez ou contactez-nous.'
-              );
-            }
-          },
+    Alert.alert(t('profile.deleteAccountTitle'), t('profile.deleteAccountMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('profile.deleteAccountConfirm'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            unwrap(await apiDelete<{ deleted: true }>('/me'));
+            await supabase.auth.signOut();
+          } catch (err) {
+            Alert.alert(t('profile.deleteAccountErrorTitle'), apiErrorMessage(err));
+          }
         },
-      ]
-    );
+      },
+    ]);
+  }
+
+  // Langue : automatique (appareil) ou forcée — persiste et re-rend immédiatement
+  const { override, setOverride } = useLocaleStore();
+  const languageValue =
+    override === null ? t('profile.languageAuto') : override === 'fr' ? 'Français' : 'English';
+  function handleLanguage() {
+    const pick = (value: LocaleOverride) => () => setOverride(value);
+    Alert.alert(t('profile.languageTitle'), undefined, [
+      { text: t('profile.languageAuto'), onPress: pick(null) },
+      { text: 'Français', onPress: pick('fr') },
+      { text: 'English', onPress: pick('en') },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   }
 
   async function handleSubscription() {
@@ -67,23 +77,23 @@ export default function Profile() {
     // Customer Center RevenueCat quand dispo (gestion/annulation in-app) ;
     // sinon fallback Réglages iOS + restauration
     if (await presentCustomerCenter()) return;
-    Alert.alert('Abonnement Premium', 'Votre abonnement est actif.', [
+    Alert.alert(t('profile.subscriptionTitle'), t('profile.subscriptionActive'), [
       {
-        text: 'Gérer dans les Réglages',
+        text: t('profile.manageInSettings'),
         onPress: () => Linking.openURL('https://apps.apple.com/account/subscriptions'),
       },
       {
-        text: 'Restaurer mes achats',
+        text: t('profile.restorePurchases'),
         onPress: async () => {
           const result = await restorePurchases().catch(() => 'none' as const);
           if (result === 'done') qc.invalidateQueries({ queryKey: ['me'] });
           Alert.alert(
-            'Restaurer',
-            result === 'done' ? 'Abonnement restauré.' : 'Aucun abonnement trouvé pour ce compte.'
+            t('paywall.restoreTitle'),
+            result === 'done' ? t('profile.restored') : t('profile.restoreNone')
           );
         },
       },
-      { text: 'Fermer', style: 'cancel' },
+      { text: t('profile.close'), style: 'cancel' },
     ]);
   }
 
@@ -92,7 +102,7 @@ export default function Profile() {
       <ScreenBackground />
       <View style={{ paddingTop: insets.top + 56 }}>
         <View style={styles.header}>
-          <ThemedText type="title">Profil</ThemedText>
+          <ThemedText type="title">{t('profile.title')}</ThemedText>
         </View>
 
         <GlassCard style={styles.card}>
@@ -103,15 +113,15 @@ export default function Profile() {
             <View style={styles.rowText}>
               {isGuestEmail(email) ? (
                 <>
-                  <ThemedText type="smallBold">Compte invité</ThemedText>
+                  <ThemedText type="smallBold">{t('profile.guestAccount')}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Créez un compte pour sécuriser vos données
+                    {t('profile.guestSubtitle')}
                   </ThemedText>
                 </>
               ) : (
                 <>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Email
+                    {t('profile.emailLabel')}
                   </ThemedText>
                   <ThemedText type="smallBold" numberOfLines={1}>
                     {email ?? '…'}
@@ -133,14 +143,44 @@ export default function Profile() {
             </View>
             <View style={styles.rowText}>
               <ThemedText type="small" themeColor="textSecondary">
-                Abonnement
+                {t('profile.subscriptionLabel')}
               </ThemedText>
               <ThemedText type="smallBold">
                 {me == null
                   ? '…'
                   : isPremium
                     ? 'Premium'
-                    : `Gratuit · ${me.watchCount}/${me.watchLimit} montres`}
+                    : t('profile.freePlan', { used: me.slotsUsed, limit: me.slotsLimit })}
+              </ThemedText>
+            </View>
+            <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
+          </Pressable>
+        </GlassCard>
+
+        <GlassCard style={styles.card}>
+          <Pressable style={styles.row} onPress={() => router.push('/profile-edit')}>
+            <View style={styles.rowIcon}>
+              <SymbolView name="person.text.rectangle" size={16} tintColor={Brand.accent} />
+            </View>
+            <View style={styles.rowText}>
+              <ThemedText type="smallBold">{t('profile.myInfo')}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {t('profile.myInfoSubtitle')}
+              </ThemedText>
+            </View>
+            <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
+          </Pressable>
+        </GlassCard>
+
+        <GlassCard style={styles.card}>
+          <Pressable style={styles.row} onPress={handleLanguage}>
+            <View style={styles.rowIcon}>
+              <SymbolView name="globe" size={16} tintColor={Brand.accent} />
+            </View>
+            <View style={styles.rowText}>
+              <ThemedText type="smallBold">{t('profile.language')}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {languageValue}
               </ThemedText>
             </View>
             <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
@@ -153,7 +193,7 @@ export default function Profile() {
               <SymbolView name="doc.text" size={16} tintColor={Brand.accent} />
             </View>
             <View style={styles.rowText}>
-              <ThemedText type="smallBold">Conditions d'utilisation</ThemedText>
+              <ThemedText type="smallBold">{t('legal.termsTitle')}</ThemedText>
             </View>
             <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
           </Pressable>
@@ -163,7 +203,17 @@ export default function Profile() {
               <SymbolView name="lock.shield" size={16} tintColor={Brand.accent} />
             </View>
             <View style={styles.rowText}>
-              <ThemedText type="smallBold">Politique de confidentialité</ThemedText>
+              <ThemedText type="smallBold">{t('legal.privacyTitle')}</ThemedText>
+            </View>
+            <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable style={styles.row} onPress={() => router.push('/legal/mentions')}>
+            <View style={styles.rowIcon}>
+              <SymbolView name="building.columns" size={16} tintColor={Brand.accent} />
+            </View>
+            <View style={styles.rowText}>
+              <ThemedText type="smallBold">{t('legal.noticeTitle')}</ThemedText>
             </View>
             <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
           </Pressable>
@@ -179,7 +229,7 @@ export default function Profile() {
               />
             </View>
             <ThemedText type="default" themeColor="negative">
-              Se déconnecter
+              {t('profile.signOut')}
             </ThemedText>
           </Pressable>
           <View style={styles.rowDivider} />
@@ -189,10 +239,10 @@ export default function Profile() {
             </View>
             <View style={styles.rowText}>
               <ThemedText type="default" themeColor="negative">
-                Supprimer mon compte
+                {t('profile.deleteAccountTitle')}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Efface définitivement toutes vos données
+                {t('profile.deleteAccountSubtitle')}
               </ThemedText>
             </View>
           </Pressable>

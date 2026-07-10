@@ -13,26 +13,18 @@ import {
   type PlanId,
 } from '@/lib/purchases';
 import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { PrimaryButton } from '@/components/primary-button';
 
 // Uniquement des features livrées — ne jamais vendre ce qui n'existe pas encore
-const FEATURES = [
-  'Montres illimitées — 5 en gratuit',
-  'Tableau de bord patrimonial : valeur & plus-value',
-  "Rapport d'expert IA sur chaque montre",
-  'Alertes de prix sur votre wishlist',
-  'Cote actualisée chaque semaine — mensuelle en gratuit',
-  'Reconnaissances photo illimitées',
-];
-
-const STUB_MESSAGE =
-  'Profitez de toutes les fonctionnalités — les abonnements arriveront plus tard.';
+const FEATURE_KEYS = ['unlimited', 'dashboard', 'weekly', 'scans'] as const;
 
 /** Paywall partagé : onboarding (premium.tsx) et modal /paywall dans l'app. */
 export function PaywallView({ onDone }: { onDone: () => void }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [plan, setPlan] = useState<PlanId>('annual');
@@ -55,17 +47,20 @@ export function PaywallView({ onDone }: { onDone: () => void }) {
     try {
       const result = await purchasePlan(plan);
       if (result === 'stub') {
-        Alert.alert('Watchy est gratuit pendant la bêta', STUB_MESSAGE, [
-          { text: 'Continuer', onPress: onDone },
+        Alert.alert(t('paywall.stubTitle'), t('paywall.stubMessage'), [
+          { text: t('common.continue'), onPress: onDone },
         ]);
       } else if (result === 'done') {
         refreshEntitlement();
-        Alert.alert('Bienvenue dans Premium', 'Toute votre collection est débloquée.', [
-          { text: 'Continuer', onPress: onDone },
+        Alert.alert(t('paywall.welcomeTitle'), t('paywall.welcomeMessage'), [
+          { text: t('common.continue'), onPress: onDone },
         ]);
       }
     } catch (err) {
-      Alert.alert('Achat impossible', err instanceof Error ? err.message : 'Réessayez.');
+      Alert.alert(
+        t('paywall.purchaseErrorTitle'),
+        err instanceof Error ? err.message : t('common.tryAgain')
+      );
     } finally {
       setBusy(false);
     }
@@ -76,17 +71,20 @@ export function PaywallView({ onDone }: { onDone: () => void }) {
     try {
       const result = await restorePurchases();
       if (result === 'stub') {
-        Alert.alert('Restaurer', 'Aucun achat à restaurer pendant la bêta.');
+        Alert.alert(t('paywall.restoreTitle'), t('paywall.restoreStub'));
       } else if (result === 'done') {
         refreshEntitlement();
-        Alert.alert('Achats restaurés', 'Votre abonnement Premium est actif.', [
-          { text: 'Continuer', onPress: onDone },
+        Alert.alert(t('paywall.restoredTitle'), t('paywall.restoredMessage'), [
+          { text: t('common.continue'), onPress: onDone },
         ]);
       } else {
-        Alert.alert('Restaurer', 'Aucun abonnement actif trouvé pour ce compte.');
+        Alert.alert(t('paywall.restoreTitle'), t('paywall.restoreNone'));
       }
     } catch (err) {
-      Alert.alert('Restauration impossible', err instanceof Error ? err.message : 'Réessayez.');
+      Alert.alert(
+        t('paywall.restoreErrorTitle'),
+        err instanceof Error ? err.message : t('common.tryAgain')
+      );
     } finally {
       setBusy(false);
     }
@@ -107,20 +105,20 @@ export function PaywallView({ onDone }: { onDone: () => void }) {
 
       <View style={styles.body}>
         <ThemedText type="title" style={styles.title}>
-          Watchy Premium
+          {t('paywall.title')}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          De l'inventaire à la gestion de patrimoine.
+          {t('paywall.subtitle')}
         </ThemedText>
 
         <View style={styles.features}>
-          {FEATURES.map((f) => (
+          {FEATURE_KEYS.map((f) => (
             <View key={f} style={styles.feature}>
               <ThemedText type="smallBold" style={styles.featureStar}>
                 ✦
               </ThemedText>
               <ThemedText type="default" style={styles.featureText}>
-                {f}
+                {t(`paywall.features.${f}`)}
               </ThemedText>
             </View>
           ))}
@@ -136,26 +134,26 @@ export function PaywallView({ onDone }: { onDone: () => void }) {
                 </ThemedText>
               </View>
               <ThemedText type="smallBold" style={styles.planName}>
-                Annuel
+                {t('paywall.annual')}
               </ThemedText>
               <ThemedText type="hero" style={styles.planPrice}>
                 {prices?.annual ?? '39,99 €'}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                soit {prices?.annualPerMonth ?? '3,33 €'}/mois
+                {t('paywall.perMonthEquiv', { price: prices?.annualPerMonth ?? '3,33 €' })}
               </ThemedText>
             </GlassCard>
           </Pressable>
           <Pressable onPress={() => setPlan('monthly')} disabled={busy}>
             <GlassCard style={[styles.planCard, plan === 'monthly' && styles.planActive]}>
               <ThemedText type="smallBold" style={styles.planName}>
-                Mensuel
+                {t('paywall.monthly')}
               </ThemedText>
               <ThemedText type="hero" style={styles.planPrice}>
                 {prices?.monthly ?? '4,99 €'}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                par mois
+                {t('paywall.perMonth')}
               </ThemedText>
             </GlassCard>
           </Pressable>
@@ -163,28 +161,30 @@ export function PaywallView({ onDone }: { onDone: () => void }) {
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Essai gratuit de 7 jours" onPress={subscribe} loading={busy} />
+        <PrimaryButton label={t('paywall.trialCta')} onPress={subscribe} loading={busy} />
         <View style={styles.secondaryRow}>
           <Pressable onPress={restore} hitSlop={8} disabled={busy}>
             <ThemedText type="small" themeColor="interactive">
-              Restaurer les achats
+              {t('paywall.restorePurchases')}
             </ThemedText>
           </Pressable>
           <Pressable onPress={onDone} hitSlop={8} disabled={busy}>
             <ThemedText type="small" themeColor="textSecondary">
-              Peut-être plus tard
+              {t('paywall.maybeLater')}
             </ThemedText>
           </Pressable>
         </View>
         <ThemedText type="small" themeColor="textSecondary" style={styles.legal}>
-          Puis {prices?.annual ?? '39,99 €'}/an, renouvellement automatique, résiliable à tout
-          moment.{' '}
+          {t('paywall.legalPrefix', {
+            monthly: prices?.monthly ?? '4,99 €',
+            annual: prices?.annual ?? '39,99 €',
+          })}
           <ThemedText
             type="small"
             themeColor="interactive"
             onPress={() => router.push('/legal/terms')}
           >
-            CGUV (EULA)
+            {t('paywall.legalTerms')}
           </ThemedText>{' '}
           ·{' '}
           <ThemedText
@@ -192,7 +192,7 @@ export function PaywallView({ onDone }: { onDone: () => void }) {
             themeColor="interactive"
             onPress={() => router.push('/legal/privacy')}
           >
-            Confidentialité
+            {t('paywall.legalPrivacy')}
           </ThemedText>
         </ThemedText>
       </View>

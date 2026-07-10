@@ -14,20 +14,40 @@
         "EXPO_PUBLIC_API_URL": "http://localhost:3000"
       }
     },
+    "preview-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REMPLACER-PAR-URL-API-PROD"
+        "EXPO_PUBLIC_API_URL": "https://api.watchy-app.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ahjbfjrauwarxlvzwcnq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_xmI6hsLsGRHXBbKGqYv3iQ_7OOKCSqx",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_PokSbpfFVRbzsdBNWbmrbNUzBhT"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://REMPLACER-PAR-URL-API-PROD"
+        "EXPO_PUBLIC_API_URL": "https://api.watchy-app.com",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ahjbfjrauwarxlvzwcnq.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_xmI6hsLsGRHXBbKGqYv3iQ_7OOKCSqx",
+        "EXPO_PUBLIC_REVENUECAT_IOS_KEY": "appl_PokSbpfFVRbzsdBNWbmrbNUzBhT"
       }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "./AuthKey_AHMP9LAZBJ.p8",
+        "ascApiKeyId": "AHMP9LAZBJ",
+        "ascApiKeyIssuerId": "f9b654bd-c198-404f-8004-913289645739",
+        "ascAppId": "6787556555",
+        "appleTeamId": "7TSB3PA39S"
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,11 +15,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { supabase } from '@/lib/supabase';
 import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
 
 export default function SignIn() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +35,22 @@ export default function SignIn() {
     setLoading(false);
     if (err) setError(err.message);
     // Redirect handled by AuthGate in root _layout
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setError(t('auth.forgotNeedEmail'));
+      return;
+    }
+    setError(null);
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'watchy://reset-password',
+    });
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    Alert.alert(t('auth.resetEmailSentTitle'), t('auth.resetEmailSentMessage'));
   }
 
   return (
@@ -48,13 +67,13 @@ export default function SignIn() {
       >
         <ThemedText style={styles.wordmark}>Watchy</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          Votre collection de montres
+          {t('auth.tagline')}
         </ThemedText>
 
         <GlassCard glow style={styles.card}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={email}
             onChangeText={setEmail}
@@ -65,7 +84,7 @@ export default function SignIn() {
           <View style={styles.divider} />
           <TextInput
             style={styles.input}
-            placeholder="Mot de passe"
+            placeholder={t('auth.passwordPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={password}
             onChangeText={setPassword}
@@ -94,19 +113,25 @@ export default function SignIn() {
               <ActivityIndicator color="#ffffff" />
             ) : (
               <ThemedText type="link" style={styles.buttonText}>
-                Se connecter
+                {t('auth.signIn')}
               </ThemedText>
             )}
           </LinearGradient>
         </Pressable>
 
+        <Pressable style={styles.linkRow} onPress={handleForgotPassword} disabled={loading}>
+          <ThemedText type="small" themeColor="interactive">
+            {t('auth.forgotPassword')}
+          </ThemedText>
+        </Pressable>
+
         <Link href="/(auth)/sign-up" asChild>
           <Pressable style={styles.linkRow}>
             <ThemedText type="small" themeColor="textSecondary">
-              Pas encore de compte ?{' '}
+              {t('auth.noAccount')}{' '}
             </ThemedText>
             <ThemedText type="small" themeColor="interactive">
-              Créer un compte
+              {t('auth.createAccountLink')}
             </ThemedText>
           </Pressable>
         </Link>

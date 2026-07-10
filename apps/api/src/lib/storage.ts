@@ -26,22 +26,6 @@ export function sniffImageMime(buffer: Buffer): ImageMime | null {
   return null;
 }
 
-/** Photo de référence d'un modèle du catalogue (préfixe models/, upsert). */
-export async function uploadModelPhoto(
-  watchModelId: string,
-  buffer: Buffer,
-  mimeType: ImageMime
-): Promise<string> {
-  const path = `models/${watchModelId}.${EXTENSIONS[mimeType]}`;
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, buffer, {
-    contentType: mimeType,
-    upsert: true,
-  });
-  if (error) throw new Error(`Model photo upload failed: ${error.message}`);
-  const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
-  return data.publicUrl;
-}
-
 export async function uploadWatchPhoto(
   userId: string,
   imageBase64: string,

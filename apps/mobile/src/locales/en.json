@@ -1,0 +1,330 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "add": "Add",
+    "delete": "Delete",
+    "save": "Save",
+    "later": "Later",
+    "yes": "Yes",
+    "no": "No",
+    "retry": "Retry",
+    "errorTitle": "Error",
+    "tryAgain": "Please try again."
+  },
+  "collection": {
+    "title": "Collection",
+    "lockedTitle": "Watch locked",
+    "lockedMessage": "Upgrade to Premium to access it again, or free up a slot by deleting it.",
+    "deleteEllipsis": "Delete…",
+    "deleteConfirmTitle": "Delete this watch?",
+    "deleteConfirmMessage": "%{brand} %{model} will be removed from your collection. This action is permanent.",
+    "teaserTitle": "Portfolio dashboard · %{used}/%{limit} watches",
+    "teaserSubtitle": "Value, capital gains and trends of your collection.",
+    "teaserCta": "Unlock with Premium",
+    "totalValue": {
+      "one": "Total value · 1 watch",
+      "other": "Total value · %{count} watches"
+    },
+    "sincePurchase": "%{amount} since purchase",
+    "sortByValue": "By value",
+    "sortRecent": "Recent",
+    "errorTitle": "Connection failed",
+    "errorSubtitle": "Your collection is safe,\nbut we can't load it right now.",
+    "emptyTitle": "Empty collection",
+    "emptySubtitle": "Take a photo of your first watch,\nwe'll identify it for you.",
+    "addWatch": "Add a watch"
+  },
+  "wishlist": {
+    "title": "Wishlist",
+    "marketPriceLabel": "market",
+    "watchLimitTitle": "Watch limit reached",
+    "scanLimitTitle": "Scan limit reached",
+    "addErrorTitle": "Unable to add",
+    "analysisErrorTitle": "Analysis failed",
+    "photoPermissionTitle": "Permission denied",
+    "photoPermissionMessage": "Allow access to your photos in Settings.",
+    "unknownBrand": "Unknown",
+    "unknownModel": "Unknown model",
+    "notRecognizedTitle": "Watch not recognized",
+    "notRecognizedMessage": "The photo is attached — search for the model or enter it manually.",
+    "lockedMessage": "Upgrade to Premium to access it again, or free up a slot by removing it.",
+    "remove": "Remove from wishlist",
+    "identifyByPhoto": "Identify by photo (optional)",
+    "photoAttached": "Photo attached — it will illustrate this watch.",
+    "addSubmit": "Add to wishlist",
+    "emptyTitle": "Your dream watches",
+    "emptySubtitle": "Track the market value of the watches you covet,\nwith or without a photo."
+  },
+  "community": {
+    "title": "Community",
+    "soon": "Soon",
+    "subtitle": "The next chapter of Watchy: connecting collectors.",
+    "pitch": {
+      "communities": {
+        "title": "Communities created by members",
+        "text": "Buying & selling, brand discussions, advice — collectors are in charge, not us."
+      },
+      "threads": {
+        "title": "Discussion threads",
+        "text": "Post, comment and chat about your watches, just like on your favorite forums."
+      },
+      "privacy": {
+        "title": "Public or private profile — you decide",
+        "text": "Show off your collection showcase… or stay discreet. Private by default."
+      }
+    },
+    "premiumStrip": "Premium members will be able to create their own communities.",
+    "notified": "We'll let you know as soon as it opens.",
+    "notifyMe": "Notify me"
+  },
+  "auth": {
+    "tagline": "Your watch collection",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "signIn": "Sign in",
+    "forgotPassword": "Forgot password?",
+    "forgotNeedEmail": "Enter your email address above first.",
+    "resetEmailSentTitle": "Email sent",
+    "resetEmailSentMessage": "If an account exists for this address, you will receive a link to choose a new password. Open it from this device.",
+    "noAccount": "No account yet?",
+    "createAccountLink": "Create an account",
+    "createMyAccount": "Create my account",
+    "haveAccount": "Already have an account?",
+    "passwordMismatch": "The passwords do not match.",
+    "checkEmail": "Check your email to confirm your account."
+  },
+  "paywall": {
+    "title": "Watchy Premium",
+    "subtitle": "From inventory to wealth management.",
+    "features": {
+      "unlimited": "Unlimited collection and wishlist — 5 watches on the free plan",
+      "dashboard": "Portfolio dashboard: value & capital gains",
+      "weekly": "Market value updated weekly — monthly on the free plan",
+      "scans": "Unlimited photo recognitions"
+    },
+    "annual": "Annual",
+    "monthly": "Monthly",
+    "perMonthEquiv": "i.e. %{price}/month",
+    "perMonth": "per month",
+    "trialCta": "7-day free trial",
+    "restorePurchases": "Restore purchases",
+    "maybeLater": "Maybe later",
+    "legalPrefix": "7-day free trial, then %{monthly}/month or %{annual}/year depending on the plan. Renews automatically unless cancelled at least 24 hours before the end of the period — manage or cancel in Settings › Subscriptions. By subscribing, you accept our ",
+    "legalTerms": "Terms of Use (EULA)",
+    "legalPrivacy": "Privacy Policy",
+    "stubTitle": "Watchy is free during the beta",
+    "stubMessage": "Enjoy every feature — subscriptions will come later.",
+    "welcomeTitle": "Welcome to Premium",
+    "welcomeMessage": "Your entire collection is unlocked.",
+    "purchaseErrorTitle": "Purchase failed",
+    "restoreTitle": "Restore",
+    "restoreStub": "No purchases to restore during the beta.",
+    "restoredTitle": "Purchases restored",
+    "restoredMessage": "Your Premium subscription is active.",
+    "restoreNone": "No active subscription found for this account.",
+    "restoreErrorTitle": "Restore failed"
+  },
+  "onboarding": {
+    "welcomeTagline": "Your collection,\ntracked and valued.",
+    "welcomeSubtitle": "Take a photo, AI identifies it, you track its value.",
+    "continueApple": "Continue with Apple",
+    "continueGoogle": "Continue with Google",
+    "continueEmail": "Continue with email",
+    "continueGuest": "Continue without an account",
+    "accountFootnote": "Account optional · create or delete it at any time from your profile.",
+    "signInError": "Sign-in failed",
+    "sourceTitle": "How did you hear about us?",
+    "sourceSubtitle": "One second to help us spread the word about Watchy.",
+    "sources": {
+      "tiktok": "TikTok",
+      "instagram": "Instagram",
+      "app_store": "App Store",
+      "bouche_a_oreille": "Word of mouth",
+      "ami_collectionneur": "A collector friend",
+      "presse": "Press / blog",
+      "autre": "Other"
+    },
+    "profileTitle": "And when it comes to watches?",
+    "profileSubtitle": "Optional — to tailor Watchy to your level.",
+    "ageLabel": "Your age range",
+    "skip": "Skip",
+    "cameraTitle": "Identify your watches in an instant",
+    "cameraSubtitle": "Watchy uses the camera only to analyze your watches and fill in their details. No image is shared without your consent.",
+    "cameraCta": "Enable the camera",
+    "notNow": "Not now",
+    "privacyTitle": "Your data belongs to you",
+    "guarantees": {
+      "photos": "Photos and purchase prices stored for you alone.",
+      "noResale": "Your personal data is never sold.",
+      "anonymous": "Market values aggregated anonymously."
+    },
+    "optInTitle": "Help improve Watchy",
+    "optInSubtitle": "Anonymous usage statistics",
+    "privacyCta": "Got it"
+  },
+  "watchDetail": {
+    "edit": "Edit",
+    "purchaseDate": "Purchase date",
+    "purchasePrice": "Purchase price",
+    "papers": "Papers",
+    "box": "Original box",
+    "dialColor": "Dial color",
+    "year": "Year",
+    "condition": "Condition",
+    "notes": "Notes",
+    "currentValue": "Current market value",
+    "valuePending": "Market value lookup in progress — check back a little later.",
+    "linkModelHint": "Link this watch to a catalog model to track its market value.",
+    "deleteFromCollection": "Remove from my collection"
+  },
+  "market": {
+    "heroLabel": "Market value · today",
+    "sinceYear": "since %{year}",
+    "chartEmpty": "Not enough history yet.\nThe market value grows with every update.",
+    "periodYear": "1Y",
+    "historySince": "History since %{date} — it grows with every market update.",
+    "capitalGain": "Capital gain",
+    "fullSet": "Full-set value (box + papers)",
+    "source": "Source: %{source}",
+    "aiDisclaimer": "AI-generated estimate, for information only — not an authenticity appraisal, a binding valuation, or investment advice."
+  },
+  "watchEdit": {
+    "title": "Edit watch",
+    "requiredTitle": "Required fields",
+    "requiredMessage": "Brand and model cannot be empty.",
+    "invalidPriceTitle": "Invalid price",
+    "invalidPriceMessage": "The purchase price must be a positive number.",
+    "invalidYearTitle": "Invalid year",
+    "invalidYearMessage": "The year must be between 1900 and %{maxYear}.",
+    "saveErrorTitle": "Save failed",
+    "brandPlaceholder": "Brand",
+    "modelPlaceholder": "Model",
+    "nicknamePlaceholder": "Nickname (e.g. Pepsi, Hulk…)",
+    "dialColorPlaceholder": "e.g. mint green",
+    "notesPlaceholder": "History, servicing, specifics…",
+    "saving": "Saving…"
+  },
+  "profileEdit": {
+    "hint": "Everything is optional. This information stays private and is deleted along with your account.",
+    "expertise": "Watch knowledge",
+    "ageRange": "Age range",
+    "location": "Location",
+    "cityPlaceholder": "City (e.g. Avignon)",
+    "countryPlaceholder": "Country (e.g. France)",
+    "locationHint": "City and country are enough — we never ask for a full address."
+  },
+  "resetPassword": {
+    "title": "New password",
+    "invalidLink": "Invalid or expired link — request a new reset email.",
+    "minChars": "8 characters minimum.",
+    "changedTitle": "Password changed",
+    "changedMessage": "You are signed in.",
+    "newPasswordPlaceholder": "New password (8 characters min.)",
+    "cta": "Change password"
+  },
+  "labels": {
+    "conditions": {
+      "neuf": "New",
+      "tres_bon": "Very good",
+      "bon": "Good",
+      "use": "Worn"
+    },
+    "expertise": {
+      "novice": "Novice",
+      "passionne": "Enthusiast",
+      "collectionneur": "Collector",
+      "metier": "It's my job"
+    }
+  },
+  "legal": {
+    "termsShort": "Terms of Use",
+    "termsTitle": "Terms of Use",
+    "privacyTitle": "Privacy Policy",
+    "noticeTitle": "Legal Notice",
+    "updated": "Last updated: %{date}"
+  },
+  "addWatch": {
+    "analyzing": "Analyzing…",
+    "analyzingSubtitle": "Identifying the case & dial",
+    "choosePhoto": "Choose a photo",
+    "identified": "Identified · %{confidence}% confidence",
+    "reference": "Ref. %{reference}",
+    "estimatedValue": "Estimated market value",
+    "addToCollection": "Add to collection",
+    "notThisOne": "Not the right one?",
+    "fallbackSubtitle": "Search for it in the model catalog\nor enter it manually."
+  },
+  "profile": {
+    "title": "Profile",
+    "guestAccount": "Guest account",
+    "guestSubtitle": "Create an account to secure your data",
+    "emailLabel": "Email",
+    "subscriptionLabel": "Subscription",
+    "freePlan": "Free · %{used}/%{limit} watches (collection + wishlist)",
+    "subscriptionTitle": "Premium subscription",
+    "subscriptionActive": "Your subscription is active.",
+    "manageInSettings": "Manage in Settings",
+    "restorePurchases": "Restore my purchases",
+    "restored": "Subscription restored.",
+    "restoreNone": "No subscription found for this account.",
+    "close": "Close",
+    "myInfo": "My information",
+    "myInfoSubtitle": "Watch knowledge, age, location",
+    "language": "Language",
+    "languageTitle": "App language",
+    "languageAuto": "Automatic (device)",
+    "signOut": "Sign out",
+    "deleteAccountTitle": "Delete my account",
+    "deleteAccountSubtitle": "Permanently erases all your data",
+    "deleteAccountMessage": "Your account, collection, photos and wishlist will be permanently erased. This action is irreversible.",
+    "deleteAccountConfirm": "Delete permanently",
+    "deleteAccountErrorTitle": "Deletion failed",
+    "deleteAccountErrorFallback": "Try again or contact us."
+  },
+  "premiumGate": {
+    "limitTitle": "Limit reached",
+    "seePremium": "See Premium"
+  },
+  "purchases": {
+    "offerUnavailable": "Offer unavailable right now — please try again later."
+  },
+  "modelSearch": {
+    "brandPlaceholder": "Brand *",
+    "modelPlaceholder": "Model *",
+    "referencePlaceholder": "Reference",
+    "backToSearch": "Back to search",
+    "searchPlaceholder": "Brand, model or reference…",
+    "suggestions": "Suggestions from our catalog",
+    "noResult": "No model found",
+    "manualEntry": "Enter manually"
+  },
+  "completionBar": {
+    "label": "Profile completed"
+  },
+  "errors": {
+    "PREMIUM_REQUIRED": "This feature requires Watchy Premium.",
+    "QUOTA_EXCEEDED": "Free plan limit reached — upgrade to Premium for unlimited watches.",
+    "SCAN_QUOTA_EXCEEDED": "Monthly recognition limit reached — upgrade to Premium to scan without limits.",
+    "NOT_FOUND": "Not found.",
+    "UNAUTHORIZED": "You must be signed in.",
+    "ALREADY_IN_WISHLIST": "This watch is already in your wishlist.",
+    "RATE_LIMITED": "Too many requests — please try again in a moment.",
+    "VALIDATION_ERROR": "Invalid data — please check your input.",
+    "INTERNAL": "Server error — please try again.",
+    "DELETE_FAILED": "Deletion failed — please try again.",
+    "GUEST_CREATE_FAILED": "Could not create the guest account.",
+    "UNKNOWN": "Something went wrong — please try again."
+  },
+  "onboardingLib": {
+    "guestError": "Could not create the guest account"
+  },
+  "oauth": {
+    "notConfigured": "This sign-in method is not configured on the server yet. Use email or continue without an account.",
+    "appleNoToken": "Apple did not provide an identity token — please try again.",
+    "missingUrl": "Missing OAuth URL — please try again.",
+    "refused": "Sign-in refused",
+    "missingCode": "Missing OAuth code in the response."
+  }
+}

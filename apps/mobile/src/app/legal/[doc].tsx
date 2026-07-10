@@ -2,15 +2,11 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LEGAL_UPDATED, PRIVACY_TEXT, TERMS_TEXT } from '@/constants/legal';
+import { LEGAL } from '@/constants/legal';
 import { Brand, Gutter, Spacing } from '@/constants/theme';
+import { useLocaleStore, useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
-
-const DOCS = {
-  terms: { title: "Conditions d'utilisation et de vente", text: TERMS_TEXT },
-  privacy: { title: 'Politique de confidentialité', text: PRIVACY_TEXT },
-} as const;
 
 /** Rendu du markdown léger des textes légaux (##, listes -, paragraphes). */
 function LegalBody({ text }: { text: string }) {
@@ -53,9 +49,17 @@ function LegalBody({ text }: { text: string }) {
 }
 
 export default function LegalDoc() {
+  const t = useT();
+  const locale = useLocaleStore((s) => s.locale);
   const insets = useSafeAreaInsets();
   const { doc } = useLocalSearchParams<{ doc: string }>();
-  const content = DOCS[doc === 'privacy' ? 'privacy' : 'terms'];
+  const docs = LEGAL[locale];
+  const content =
+    doc === 'privacy'
+      ? { title: t('legal.privacyTitle'), text: docs.privacy }
+      : doc === 'mentions'
+        ? { title: t('legal.noticeTitle'), text: docs.notice }
+        : { title: t('legal.termsTitle'), text: docs.terms };
 
   return (
     <View style={styles.container}>
@@ -71,7 +75,7 @@ export default function LegalDoc() {
           {content.title}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Dernière mise à jour : {LEGAL_UPDATED}
+          {t('legal.updated', { date: docs.updated })}
         </ThemedText>
         <View style={styles.body}>
           <LegalBody text={content.text} />

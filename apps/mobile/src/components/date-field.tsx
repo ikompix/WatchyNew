@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 
 import { Colors, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from './themed-text';
 
 type DateFieldProps = {
@@ -29,6 +30,7 @@ function parseIsoDate(value: string): Date | null {
  * Vide → « Ajouter » ; rempli → picker compact iOS (ou dialogue Android) + effacement.
  */
 export function DateField({ label, value, onChange }: DateFieldProps) {
+  const t = useT();
   const date = value ? parseIsoDate(value) : null;
 
   function openAndroidPicker() {
@@ -60,7 +62,7 @@ export function DateField({ label, value, onChange }: DateFieldProps) {
       {date == null ? (
         <Pressable onPress={startPicking} hitSlop={8}>
           <ThemedText type="small" themeColor="interactive">
-            Ajouter
+            {t('common.add')}
           </ThemedText>
         </Pressable>
       ) : (

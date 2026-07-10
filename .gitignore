@@ -34,15 +34,24 @@ yarn-error.*
 .env
 .env.local
 .env*.local
+*.bak
 
 # typescript
 *.tsbuildinfo
 
 example
 
-# generated native folders
-/ios
-/android
+# generated native folders (CNG : EAS lance prebuild — ne jamais commiter,
+# sinon EAS saute prebuild et perd la config d'app.json, dont les locales)
+apps/mobile/ios/
+apps/mobile/android/
+
+# turbo
+.turbo/
+
+# captures locales
+screen app/
 
 # Supabase CLI
 supabase/.temp/
+supabase/.branches/

@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useWatch } from '@/hooks/use-watches';
 import { useMarketPrices } from '@/hooks/use-market-prices';
-import { Brand, CardGap, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
+import { Brand, CardGap, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
+import { formatCurrency, formatDate } from '@/lib/format';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
@@ -13,12 +15,7 @@ import { Sparkline } from '@/components/sparkline';
 import { SegmentedText } from '@/components/segmented-text';
 
 const euro = (value: number, signed = false) =>
-  new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-    ...(signed ? { signDisplay: 'always' as const } : null),
-  }).format(value);
+  formatCurrency(value, signed ? { signDisplay: 'always' } : undefined);
 
 const PERIODS = ['1M', '6M', '1A', 'MAX'] as const;
 type Period = (typeof PERIODS)[number];
@@ -31,11 +28,15 @@ const PERIOD_DAYS: Record<Period, number | null> = {
 };
 
 export default function MarketDetail() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { data: watch } = useWatch(id);
   const market = useMarketPrices(id);
   const [period, setPeriod] = useState<Period | null>(null);
+  // Instant de référence figé au montage : les coupures de période restent
+  // stables d'un rendu à l'autre
+  const [now] = useState(() => Date.now());
 
   if (!watch || market.isLoading) {
     return (
@@ -50,7 +51,7 @@ export default function MarketDetail() {
   const chronological = [...(market.data?.history ?? [])].reverse();
   const pointsFor = (p: Period) => {
     const days = PERIOD_DAYS[p];
-    const cutoff = days != null ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+    const cutoff = days != null ? now - days * 24 * 60 * 60 * 1000 : 0;
     return chronological.filter((pt) => new Date(pt.fetchedAt).getTime() >= cutoff);
   };
 
@@ -69,9 +70,7 @@ export default function MarketDetail() {
 
   const points = pointsFor(activePeriod);
   const values = points.map((p) => p.price);
-  const historySince = chronological[0]
-    ? new Date(chronological[0].fetchedAt).toLocaleDateString('fr-FR')
-    : null;
+  const historySince = chronological[0] ? formatDate(chronological[0].fetchedAt) : null;
 
   const latest = market.data?.latest ?? null;
   const first = values[0] ?? null;
@@ -99,6 +98,7 @@ export default function MarketDetail() {
           <ThemedText type="subtitle">{watch.brand}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {watch.model}
+            {watch.nickname ? ` “${watch.nickname}”` : ''}
             {watch.reference ? ` · ${watch.reference}` : ''}
           </ThemedText>
         </View>
@@ -106,7 +106,7 @@ export default function MarketDetail() {
         {/* Hero cote */}
         <View style={styles.heroBlock}>
           <ThemedText type="small" themeColor="textSecondary">
-            Cote de marché · aujourd'hui
+            {t('market.heroLabel')}
           </ThemedText>
           <View style={styles.heroRow}>
             <ThemedText type="hero" style={styles.heroValue}>
@@ -125,8 +125,10 @@ export default function MarketDetail() {
           </View>
           {plusValue != null ? (
             <ThemedText type="small" themeColor="textSecondary">
-              {euro(plusValue, true)} depuis l'achat
-              {watch.purchaseDate ? ` · depuis ${watch.purchaseDate.slice(0, 4)}` : ''}
+              {t('collection.sincePurchase', { amount: euro(plusValue, true) })}
+              {watch.purchaseDate
+                ? ` · ${t('market.sinceYear', { year: watch.purchaseDate.slice(0, 4) })}`
+                : ''}
             </ThemedText>
           ) : null}
         </View>
@@ -146,7 +148,7 @@ export default function MarketDetail() {
           ) : (
             <View style={styles.chartEmpty}>
               <ThemedText type="small" themeColor="textSecondary" style={styles.chartEmptyText}>
-                Pas encore assez d'historique.{'\n'}La cote s'enrichit à chaque mise à jour.
+                {t('market.chartEmpty')}
               </ThemedText>
             </View>
           )}
@@ -156,11 +158,12 @@ export default function MarketDetail() {
               value={activePeriod}
               onChange={setPeriod}
               disabledOptions={disabledPeriods}
+              labels={{ '1A': t('market.periodYear') }}
             />
           </View>
           {historySince && values.length > 1 ? (
             <ThemedText type="small" themeColor="textSecondary" style={styles.historyNote}>
-              Historique depuis le {historySince} — il s'étoffe à chaque mise à jour de cote.
+              {t('market.historySince', { date: historySince })}
             </ThemedText>
           ) : null}
         </GlassCard>
@@ -169,7 +172,7 @@ export default function MarketDetail() {
         <View style={styles.miniRow}>
           <GlassCard style={styles.miniCard}>
             <ThemedText type="small" themeColor="textSecondary">
-              Prix d'achat
+              {t('watchDetail.purchasePrice')}
             </ThemedText>
             <ThemedText type="smallBold" style={styles.miniValue}>
               {watch.purchasePrice != null ? euro(watch.purchasePrice) : '—'}
@@ -177,7 +180,7 @@ export default function MarketDetail() {
           </GlassCard>
           <GlassCard style={styles.miniCard}>
             <ThemedText type="small" themeColor="textSecondary">
-              Plus-value
+              {t('market.capitalGain')}
             </ThemedText>
             <ThemedText
               type="smallBold"
@@ -193,7 +196,7 @@ export default function MarketDetail() {
         {latest?.fullSetPrice != null ? (
           <GlassCard style={styles.fullSetCard}>
             <ThemedText type="small" themeColor="textSecondary">
-              Cote full set (boîte + papiers)
+              {t('market.fullSet')}
             </ThemedText>
             <ThemedText type="smallBold" style={styles.miniValue}>
               {euro(latest.fullSetPrice)}
@@ -203,10 +206,14 @@ export default function MarketDetail() {
 
         {latest?.source ? (
           <ThemedText type="small" themeColor="textSecondary" style={styles.sourceNote}>
-            Source : {latest.source.replace(/^web:/, '')} ·{' '}
-            {new Date(latest.fetchedAt).toLocaleDateString('fr-FR')}
+            {t('market.source', { source: latest.source.replace(/^web:/, '') })} ·{' '}
+            {formatDate(latest.fetchedAt)}
           </ThemedText>
         ) : null}
+
+        <ThemedText type="delta" themeColor="textSecondary" style={styles.sourceNote}>
+          {t('market.aiDisclaimer')}
+        </ThemedText>
       </ScrollView>
     </View>
   );

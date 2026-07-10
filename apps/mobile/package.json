@@ -6,11 +6,11 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint": "expo lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@expo-google-fonts/ibm-plex-mono": "^0.3.0",
@@ -34,6 +34,7 @@
     "expo-image-picker": "~56.0.18",
     "expo-linear-gradient": "~56.0.4",
     "expo-linking": "~56.0.14",
+    "expo-localization": "~56.0.6",
     "expo-notifications": "~56.0.19",
     "expo-router": "~56.2.11",
     "expo-secure-store": "~56.0.4",
@@ -42,6 +43,7 @@
     "expo-symbols": "~56.0.6",
     "expo-system-ui": "~56.0.5",
     "expo-web-browser": "~56.0.5",
+    "i18n-js": "^4.5.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.85.3",
@@ -60,6 +62,8 @@
   "devDependencies": {
     "@expo/ngrok": "^4.1.0",
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.4",
+    "eslint-config-expo": "~56.0.4",
     "typescript": "~6.0.3"
   }
 }

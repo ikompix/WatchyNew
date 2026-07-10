@@ -3,19 +3,17 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { supabase } from './supabase';
+import { t } from './i18n';
 
 /** Résultat homogène : 'done' = session ouverte, 'cancelled' = geste utilisateur. */
 export type OAuthOutcome = 'done' | 'cancelled';
 
 function friendly(message: string): string {
   if (/provider is not enabled|Unsupported provider/i.test(message)) {
-    return NOT_CONFIGURED;
+    return t('oauth.notConfigured');
   }
   return message;
 }
-
-const NOT_CONFIGURED =
-  "Ce mode de connexion n'est pas encore configuré côté serveur. Utilisez l'e-mail ou continuez sans compte.";
 
 // Pré-vérification via l'endpoint public de settings : évite d'ouvrir un
 // navigateur sur une page d'erreur JSON quand le provider n'est pas activé.
@@ -36,7 +34,7 @@ async function providerEnabled(name: 'apple' | 'google'): Promise<boolean> {
 
 /** Sign in with Apple natif → session Supabase (signInWithIdToken). */
 export async function signInWithApple(): Promise<OAuthOutcome> {
-  if (!(await providerEnabled('apple'))) throw new Error(NOT_CONFIGURED);
+  if (!(await providerEnabled('apple'))) throw new Error(t('oauth.notConfigured'));
 
   let credential: AppleAuthentication.AppleAuthenticationCredential;
   try {
@@ -53,7 +51,7 @@ export async function signInWithApple(): Promise<OAuthOutcome> {
   }
 
   if (!credential.identityToken) {
-    throw new Error("Apple n'a pas fourni de jeton d'identité — réessayez.");
+    throw new Error(t('oauth.appleNoToken'));
   }
 
   const { error } = await supabase.auth.signInWithIdToken({
@@ -66,7 +64,7 @@ export async function signInWithApple(): Promise<OAuthOutcome> {
 
 /** OAuth Google via navigateur (flux PKCE, compatible Expo Go). */
 export async function signInWithGoogle(): Promise<OAuthOutcome> {
-  if (!(await providerEnabled('google'))) throw new Error(NOT_CONFIGURED);
+  if (!(await providerEnabled('google'))) throw new Error(t('oauth.notConfigured'));
 
   const redirectTo = Linking.createURL('auth-callback');
 
@@ -75,16 +73,16 @@ export async function signInWithGoogle(): Promise<OAuthOutcome> {
     options: { redirectTo, skipBrowserRedirect: true },
   });
   if (error) throw new Error(friendly(error.message));
-  if (!data.url) throw new Error('URL OAuth manquante — réessayez.');
+  if (!data.url) throw new Error(t('oauth.missingUrl'));
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (result.type !== 'success') return 'cancelled';
 
   const { params, errorCode } = QueryParams.getQueryParams(result.url);
   if (errorCode || params.error_description) {
-    throw new Error(friendly(params.error_description ?? errorCode ?? 'Connexion refusée'));
+    throw new Error(friendly(params.error_description ?? errorCode ?? t('oauth.refused')));
   }
-  if (!params.code) throw new Error('Code OAuth manquant dans la réponse.');
+  if (!params.code) throw new Error(t('oauth.missingCode'));
 
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(params.code);
   if (exchangeError) throw new Error(friendly(exchangeError.message));

@@ -3,7 +3,11 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db/index.js';
 import { marketPrices, watches, watchModels } from '../db/schema.js';
+import { UsageTracker } from './ai-usage.js';
 
+// Libellés internes aux prompts (jamais affichés à l'utilisateur) — ils
+// restent en français quelle que soit la langue de l'app : la sortie du
+// modèle est purement numérique.
 const CONDITION_LABELS: Record<string, string> = {
   neuf: 'neuf (jamais porté)',
   tres_bon: 'très bon état',
@@ -118,29 +122,32 @@ Si le modèle est introuvable ou trop rare pour une cote fiable, indique found=f
     },
   ];
 
-  let response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4000,
-    thinking: { type: 'adaptive' },
-    tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 4 }],
-    output_config: { format: { type: 'json_schema', schema: OUTPUT_SCHEMA } },
-    messages,
-  });
-
-  // Les outils serveur peuvent suspendre le tour — on relance jusqu'à complétion
-  let continuations = 0;
-  while (response.stop_reason === 'pause_turn' && continuations < 5) {
-    messages = [...messages, { role: 'assistant', content: response.content }];
-    response = await client.messages.create({
+  const usage = new UsageTracker(`cote ${label}`, 'claude-sonnet-4-6');
+  // cache_control top-level : chaque tour met le préfixe en cache, les
+  // continuations pause_turn relisent les résultats de recherche à 0,1× au
+  // lieu de repayer tout le contexte plein tarif. Pas de thinking : extraction
+  // de prix structurée, le raisonnement long n'apporte pas assez pour son coût.
+  const request = () =>
+    client!.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
-      thinking: { type: 'adaptive' },
-      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 4 }],
+      max_tokens: 2500,
+      cache_control: { type: 'ephemeral' },
+      tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 3 }],
       output_config: { format: { type: 'json_schema', schema: OUTPUT_SCHEMA } },
       messages,
     });
+
+  let response = await request();
+  usage.add(response.usage);
+  // Reprise pause_turn plafonnée — chaque tour supplémentaire coûte
+  let continuations = 0;
+  while (response.stop_reason === 'pause_turn' && continuations < 2) {
+    messages = [...messages, { role: 'assistant', content: response.content }];
+    response = await request();
+    usage.add(response.usage);
     continuations++;
   }
+  usage.log();
 
   if (response.stop_reason === 'refusal') {
     console.warn(`[market] ${label}: refused (${Date.now() - startedAt}ms)`);
@@ -206,7 +213,11 @@ export async function refreshWatchPrice(watchId: string): Promise<boolean> {
     .where(eq(watchModels.id, watch.watchModelId));
   if (!model) return false;
 
-  const research = await researchMarketPrice(model, attrs);
+  // Le surnom porté par la montre prime (reco IA, saisie) sur celui du catalogue
+  const research = await researchMarketPrice(
+    { ...model, nickname: watch.nickname ?? model.nickname },
+    attrs
+  );
   if (!research?.found || research.priceEur == null) return false;
 
   const source = `web:${research.sources.slice(0, 2).join(',') || 'recherche'}`.slice(0, 120);
@@ -214,12 +225,14 @@ export async function refreshWatchPrice(watchId: string): Promise<boolean> {
   if (research.priceSixMonthsAgoEur != null) {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Pas de suffixe texte : le point rétrodaté se reconnaît à son fetchedAt,
+    // et `source` reste neutre en langue (affiché tel quel côté mobile)
     rows.push({
       watchModelId: watch.watchModelId,
       watchId,
       price: research.priceSixMonthsAgoEur.toFixed(2),
       currency: 'EUR',
-      source: `${source} (estimation -6 mois)`.slice(0, 160),
+      source,
       fetchedAt: sixMonthsAgo,
     });
   }
@@ -257,11 +270,12 @@ export async function refreshModelPrice(watchModelId: string): Promise<boolean> 
   if (research.priceSixMonthsAgoEur != null) {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Point rétrodaté identifiable par fetchedAt — `source` reste neutre en langue
     rows.push({
       watchModelId,
       price: research.priceSixMonthsAgoEur.toFixed(2),
       currency: 'EUR',
-      source: `${source} (estimation -6 mois)`.slice(0, 160),
+      source,
       fetchedAt: sixMonthsAgo,
     });
   }

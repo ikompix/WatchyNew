@@ -3,7 +3,7 @@ import { eq, desc, and, ne, gt, isNull } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { marketPrices, watches } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { getPlan, STALE_DAYS_FREE, STALE_DAYS_PREMIUM } from '../lib/entitlements.js';
+import { getLockedIds, getPlan, STALE_DAYS_FREE, STALE_DAYS_PREMIUM } from '../lib/entitlements.js';
 import {
   marketResearchAvailable,
   refreshInBackground,
@@ -55,6 +55,18 @@ router.get('/watch/:watchId', async (c) => {
     return c.json<ApiResponse<never>>(
       { data: null, error: { code: 'NOT_FOUND', message: 'Watch not found' } },
       404
+    );
+  }
+  if ((await getLockedIds(userId)).watchIds.has(watchId)) {
+    return c.json<ApiResponse<never>>(
+      {
+        data: null,
+        error: {
+          code: 'PREMIUM_REQUIRED',
+          message: 'Cette montre est verrouillée — repassez à Premium pour y accéder.',
+        },
+      },
+      403
     );
   }
 

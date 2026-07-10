@@ -7,18 +7,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { getAnalyticsOptIn, setAnalyticsOptIn } from '@/lib/onboarding';
 import { Brand, Gutter, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { PrimaryButton } from '@/components/primary-button';
 
-const GUARANTEES = [
-  'Photos et prix d\'achat stockés pour vous seul.',
-  'Jamais de revente de vos données personnelles.',
-  'Cotes agrégées de façon anonyme.',
-];
+const GUARANTEE_KEYS = ['photos', 'noResale', 'anonymous'] as const;
 
 export default function Privacy() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // Opt-in explicite : off par défaut (ATT / RGPD)
@@ -56,15 +54,15 @@ export default function Privacy() {
         </LinearGradient>
 
         <ThemedText type="title" style={styles.title}>
-          Vos données vous appartiennent
+          {t('onboarding.privacyTitle')}
         </ThemedText>
 
         <View style={styles.guarantees}>
-          {GUARANTEES.map((g) => (
+          {GUARANTEE_KEYS.map((g) => (
             <View key={g} style={styles.guarantee}>
               <SymbolView name="checkmark" size={13} tintColor={Brand.positive} weight="semibold" />
               <ThemedText type="small" themeColor="textSecondary" style={styles.guaranteeText}>
-                {g}
+                {t(`onboarding.guarantees.${g}`)}
               </ThemedText>
             </View>
           ))}
@@ -74,10 +72,10 @@ export default function Privacy() {
         <GlassCard style={styles.optInCard}>
           <View style={styles.optInText}>
             <ThemedText type="smallBold" style={styles.optInTitle}>
-              Aider à améliorer Watchy
+              {t('onboarding.optInTitle')}
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              Statistiques d'usage anonymes
+              {t('onboarding.optInSubtitle')}
             </ThemedText>
           </View>
           <Switch
@@ -91,11 +89,14 @@ export default function Privacy() {
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton label="J'ai compris" onPress={() => router.push('/(onboarding)/premium')} />
+        <PrimaryButton
+          label={t('onboarding.privacyCta')}
+          onPress={() => router.push('/(onboarding)/premium')}
+        />
         <View style={styles.legalRow}>
           <Pressable onPress={() => legalLink('privacy')} hitSlop={8}>
             <ThemedText type="small" themeColor="interactive">
-              Politique de confidentialité
+              {t('legal.privacyTitle')}
             </ThemedText>
           </Pressable>
           <ThemedText type="small" themeColor="textSecondary">
@@ -104,7 +105,7 @@ export default function Privacy() {
           </ThemedText>
           <Pressable onPress={() => legalLink('terms')} hitSlop={8}>
             <ThemedText type="small" themeColor="interactive">
-              CGUV
+              {t('legal.termsShort')}
             </ThemedText>
           </Pressable>
         </View>

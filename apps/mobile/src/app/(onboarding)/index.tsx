@@ -7,6 +7,7 @@ import { SymbolView } from 'expo-symbols';
 import { getOnboarded, signInAsGuest } from '@/lib/onboarding';
 import { signInWithApple, signInWithGoogle } from '@/lib/oauth';
 import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { WatchDial } from '@/components/watch-dial';
@@ -14,6 +15,7 @@ import { WatchDial } from '@/components/watch-dial';
 type Provider = 'apple' | 'google' | 'guest';
 
 export default function Welcome() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [pending, setPending] = useState<Provider | null>(null);
@@ -25,7 +27,7 @@ export default function Welcome() {
   // Après n'importe quelle connexion : reprendre le parcours ou aller à la collection
   async function postAuth() {
     const onboarded = await getOnboarded();
-    router.replace(onboarded ? '/(app)/collection' : '/(onboarding)/camera');
+    router.replace(onboarded ? '/(app)/collection' : '/(onboarding)/source');
   }
 
   async function run(provider: Provider, action: () => Promise<unknown>) {
@@ -34,7 +36,10 @@ export default function Welcome() {
       const outcome = await action();
       if (outcome !== 'cancelled') await postAuth();
     } catch (err) {
-      Alert.alert('Connexion impossible', err instanceof Error ? err.message : 'Réessayez.');
+      Alert.alert(
+        t('onboarding.signInError'),
+        err instanceof Error ? err.message : t('common.tryAgain')
+      );
     } finally {
       setPending(null);
     }
@@ -56,10 +61,10 @@ export default function Welcome() {
           Watchy
         </ThemedText>
         <ThemedText type="title" style={styles.tagline}>
-          Votre collection,{'\n'}suivie et estimée.
+          {t('onboarding.welcomeTagline')}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          Photographiez, l'IA identifie, vous suivez la cote.
+          {t('onboarding.welcomeSubtitle')}
         </ThemedText>
       </View>
 
@@ -77,7 +82,7 @@ export default function Welcome() {
               <>
                 <SymbolView name="apple.logo" size={17} tintColor="#ffffff" />
                 <ThemedText type="link" style={styles.appleLabel}>
-                  Continuer avec Apple
+                  {t('onboarding.continueApple')}
                 </ThemedText>
               </>
             )}
@@ -97,7 +102,7 @@ export default function Welcome() {
                 G
               </ThemedText>
               <ThemedText type="link" style={styles.lightLabel}>
-                Continuer avec Google
+                {t('onboarding.continueGoogle')}
               </ThemedText>
             </>
           )}
@@ -110,7 +115,7 @@ export default function Welcome() {
         >
           <SymbolView name="envelope" size={16} tintColor={Brand.ink} />
           <ThemedText type="link" style={styles.lightLabel}>
-            Continuer avec e-mail
+            {t('onboarding.continueEmail')}
           </ThemedText>
         </Pressable>
 
@@ -123,14 +128,13 @@ export default function Welcome() {
             <ActivityIndicator color={Brand.accent} size="small" />
           ) : (
             <ThemedText type="link" themeColor="interactive">
-              Continuer sans compte
+              {t('onboarding.continueGuest')}
             </ThemedText>
           )}
         </Pressable>
 
         <ThemedText type="small" themeColor="textSecondary" style={styles.footnote}>
-          Compte facultatif · création et suppression possibles à tout moment depuis votre
-          profil.
+          {t('onboarding.accountFootnote')}
         </ThemedText>
       </View>
     </View>

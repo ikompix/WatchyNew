@@ -1,4 +1,7 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+
 import { supabase } from './supabase';
+import { t } from './i18n';
 
 export type PlanId = 'monthly' | 'annual';
 export type PurchaseResult = 'done' | 'cancelled' | 'stub';
@@ -17,8 +20,13 @@ type Package = import('react-native-purchases').PurchasesPackage;
  */
 function nativePurchases(): PurchasesModule | null {
   if (!process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY) return null;
+  // Expo Go récent : le require passe (RC bascule en « Browser Mode ») mais
+  // configure() rejette la clé appl_ — on force le stub comme si le module
+  // natif manquait
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) return null;
   try {
     // require gardé — un import statique planterait au chargement en Expo Go
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('react-native-purchases').default as PurchasesModule;
   } catch {
     return null;
@@ -34,6 +42,7 @@ async function configuredPurchases(): Promise<PurchasesModule | null> {
   if (!Purchases) return null;
   if (!configured) {
     if (__DEV__) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { LOG_LEVEL } = require('react-native-purchases');
       Purchases.setLogLevel(LOG_LEVEL.DEBUG);
     }
@@ -122,7 +131,7 @@ export async function purchasePlan(plan: PlanId): Promise<PurchaseResult> {
 
   const packages = resolvePackages(await Purchases.getOfferings());
   const pkg = plan === 'annual' ? packages.annual : packages.monthly;
-  if (!pkg) throw new Error('Offre indisponible pour le moment — réessayez plus tard.');
+  if (!pkg) throw new Error(t('purchases.offerUnavailable'));
 
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
@@ -148,6 +157,7 @@ export async function restorePurchases(): Promise<RestoreResult> {
 export async function presentCustomerCenter(): Promise<boolean> {
   if (!(await configuredPurchases())) return false;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const RevenueCatUI = require('react-native-purchases-ui').default;
     await RevenueCatUI.presentCustomerCenter();
     return true;

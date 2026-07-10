@@ -14,11 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
 import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 
 export default function SignUp() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +32,7 @@ export default function SignUp() {
   async function handleSignUp() {
     setError(null);
     if (password !== confirm) {
-      setError('Les mots de passe ne correspondent pas.');
+      setError(t('auth.passwordMismatch'));
       return;
     }
     setLoading(true);
@@ -50,7 +52,7 @@ export default function SignUp() {
         <ThemedText style={styles.wordmark}>Watchy</ThemedText>
         <GlassCard style={styles.successCard}>
           <ThemedText type="default" style={{ textAlign: 'center' }}>
-            Vérifiez votre email pour confirmer votre compte.
+            {t('auth.checkEmail')}
           </ThemedText>
         </GlassCard>
       </View>
@@ -66,13 +68,13 @@ export default function SignUp() {
       >
         <ThemedText style={styles.wordmark}>Watchy</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          Créer un compte
+          {t('auth.createAccountLink')}
         </ThemedText>
 
         <GlassCard glow style={styles.card}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t('auth.emailPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={email}
             onChangeText={setEmail}
@@ -83,7 +85,7 @@ export default function SignUp() {
           <View style={styles.divider} />
           <TextInput
             style={styles.input}
-            placeholder="Mot de passe"
+            placeholder={t('auth.passwordPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={password}
             onChangeText={setPassword}
@@ -92,7 +94,7 @@ export default function SignUp() {
           <View style={styles.divider} />
           <TextInput
             style={styles.input}
-            placeholder="Confirmer le mot de passe"
+            placeholder={t('auth.confirmPasswordPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={confirm}
             onChangeText={setConfirm}
@@ -120,7 +122,7 @@ export default function SignUp() {
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <ThemedText type="link" style={styles.buttonText}>Créer mon compte</ThemedText>
+              <ThemedText type="link" style={styles.buttonText}>{t('auth.createMyAccount')}</ThemedText>
             )}
           </LinearGradient>
         </Pressable>
@@ -128,10 +130,10 @@ export default function SignUp() {
         <Link href="/(auth)/sign-in" asChild>
           <Pressable style={styles.linkRow}>
             <ThemedText type="small" themeColor="textSecondary">
-              Déjà un compte ?{' '}
+              {t('auth.haveAccount')}{' '}
             </ThemedText>
             <ThemedText type="small" themeColor="interactive">
-              Se connecter
+              {t('auth.signIn')}
             </ThemedText>
           </Pressable>
         </Link>

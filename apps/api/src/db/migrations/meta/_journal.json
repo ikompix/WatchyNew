@@ -36,6 +36,55 @@
       "when": 1783187452281,
       "tag": "0004_third_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783259245262,
+      "tag": "0005_pivot_drops",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783259261574,
+      "tag": "0006_wishlist_photo",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783260815985,
+      "tag": "0007_backoffice",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783262139249,
+      "tag": "0008_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1783266719743,
+      "tag": "0009_admin_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783279929577,
+      "tag": "0010_drop_expert_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783709009045,
+      "tag": "0011_watch_nickname",
+      "breakpoints": true
     }
   ]
 }

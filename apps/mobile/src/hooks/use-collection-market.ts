@@ -34,7 +34,9 @@ async function fetchSeries(watchId: string): Promise<number[]> {
  * cohérente avec la fiche. Agrégats dérivés pour la carte « Valeur totale ».
  */
 export function useCollectionMarket(watches: Watch[] | undefined): CollectionMarket {
-  const watchIds = (watches ?? []).filter((w) => w.watchModelId).map((w) => w.id);
+  // Montres verrouillées (free au-delà du quota) : cote inaccessible (403) et
+  // exclues des agrégats — leur valeur est masquée dans la liste
+  const watchIds = (watches ?? []).filter((w) => w.watchModelId && !w.locked).map((w) => w.id);
 
   const queries = useQueries({
     queries: watchIds.map((watchId) => ({
@@ -58,6 +60,7 @@ export function useCollectionMarket(watches: Watch[] | undefined): CollectionMar
   const memberSeries: number[][] = [];
 
   for (const w of watches ?? []) {
+    if (w.locked) continue;
     const series = seriesByWatch.get(w.id) ?? [];
     const latest = series.length > 0 ? series[series.length - 1] : null;
     const first = series.length > 0 ? series[0] : null;

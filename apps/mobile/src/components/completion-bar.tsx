@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Brand, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from './themed-text';
 
 type CompletionBarProps = {
@@ -10,12 +11,13 @@ type CompletionBarProps = {
 
 /** Barre de complétion linéaire du handoff (fiche montre). */
 export function CompletionBar({ value }: CompletionBarProps) {
+  const t = useT();
   const pct = Math.max(0, Math.min(100, value));
   return (
     <View style={styles.container}>
       <View style={styles.labels}>
         <ThemedText type="small" themeColor="textSecondary">
-          Fiche complétée
+          {t('completionBar.label')}
         </ThemedText>
         <ThemedText type="smallBold" style={styles.pct}>
           {Math.round(pct)}%

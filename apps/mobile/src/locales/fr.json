@@ -1,0 +1,316 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "continue": "Continuer",
+    "add": "Ajouter",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "later": "Plus tard",
+    "yes": "Oui",
+    "no": "Non",
+    "retry": "Réessayer",
+    "errorTitle": "Erreur",
+    "tryAgain": "Réessayez."
+  },
+  "collection": {
+    "title": "Collection",
+    "lockedTitle": "Montre verrouillée",
+    "lockedMessage": "Passez à Premium pour y accéder à nouveau, ou libérez un emplacement en la supprimant.",
+    "deleteEllipsis": "Supprimer…",
+    "deleteConfirmTitle": "Supprimer cette montre ?",
+    "deleteConfirmMessage": "%{brand} %{model} sera retirée de votre collection. Cette action est définitive.",
+    "teaserTitle": "Tableau de bord patrimonial · %{used}/%{limit} montres",
+    "teaserSubtitle": "Valeur, plus-value et évolution de votre collection.",
+    "teaserCta": "Débloquer avec Premium",
+    "totalValue": {
+      "one": "Valeur totale · 1 montre",
+      "other": "Valeur totale · %{count} montres"
+    },
+    "sincePurchase": "%{amount} depuis l'achat",
+    "sortByValue": "Par valeur",
+    "sortRecent": "Récent",
+    "errorTitle": "Connexion impossible",
+    "errorSubtitle": "Votre collection est en sécurité,\nmais on n'arrive pas à la charger.",
+    "emptyTitle": "Collection vide",
+    "emptySubtitle": "Photographiez votre première montre,\non s'occupe de l'identifier.",
+    "addWatch": "Ajouter une montre"
+  },
+  "wishlist": {
+    "title": "Wishlist",
+    "marketPriceLabel": "cote",
+    "watchLimitTitle": "Limite de montres atteinte",
+    "scanLimitTitle": "Limite de scans atteinte",
+    "addErrorTitle": "Impossible",
+    "analysisErrorTitle": "Analyse impossible",
+    "photoPermissionTitle": "Permission refusée",
+    "photoPermissionMessage": "Autorisez l'accès aux photos dans les réglages.",
+    "unknownBrand": "Inconnue",
+    "unknownModel": "Modèle inconnu",
+    "notRecognizedTitle": "Montre non reconnue",
+    "notRecognizedMessage": "La photo est attachée — cherchez le modèle ou saisissez-le manuellement.",
+    "lockedMessage": "Passez à Premium pour y accéder à nouveau, ou libérez un emplacement en la retirant.",
+    "remove": "Retirer de la wishlist",
+    "identifyByPhoto": "Identifier par photo (facultatif)",
+    "photoAttached": "Photo attachée — elle illustrera cette montre.",
+    "addSubmit": "Ajouter à la wishlist",
+    "emptyTitle": "Vos montres de rêve",
+    "emptySubtitle": "Suivez la cote des montres que vous convoitez,\navec ou sans photo."
+  },
+  "community": {
+    "title": "Communauté",
+    "soon": "Bientôt",
+    "subtitle": "Le prochain chapitre de Watchy : échanger entre collectionneurs.",
+    "pitch": {
+      "communities": {
+        "title": "Des communautés créées par les membres",
+        "text": "Achat & revente, discussions par marque, conseils — les collectionneurs ont la main, pas nous."
+      },
+      "threads": {
+        "title": "Des fils de discussion",
+        "text": "Postez, commentez, échangez autour de vos montres, comme sur vos forums préférés."
+      },
+      "privacy": {
+        "title": "Profil public ou privé — vous décidez",
+        "text": "Montrez votre vitrine de collection… ou restez discret. Privé par défaut."
+      }
+    },
+    "premiumStrip": "Les membres Premium pourront créer leurs propres communautés.",
+    "notified": "On vous préviendra dès l'ouverture.",
+    "notifyMe": "Me prévenir"
+  },
+  "auth": {
+    "tagline": "Votre collection de montres",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Mot de passe",
+    "confirmPasswordPlaceholder": "Confirmer le mot de passe",
+    "signIn": "Se connecter",
+    "forgotPassword": "Mot de passe oublié ?",
+    "forgotNeedEmail": "Saisissez d'abord votre adresse e-mail ci-dessus.",
+    "resetEmailSentTitle": "E-mail envoyé",
+    "resetEmailSentMessage": "Si un compte existe pour cette adresse, vous recevrez un lien pour choisir un nouveau mot de passe. Ouvrez-le depuis cet appareil.",
+    "noAccount": "Pas encore de compte ?",
+    "createAccountLink": "Créer un compte",
+    "createMyAccount": "Créer mon compte",
+    "haveAccount": "Déjà un compte ?",
+    "passwordMismatch": "Les mots de passe ne correspondent pas.",
+    "checkEmail": "Vérifiez votre email pour confirmer votre compte."
+  },
+  "paywall": {
+    "title": "Watchy Premium",
+    "subtitle": "De l'inventaire à la gestion de patrimoine.",
+    "features": {
+      "unlimited": "Collection et wishlist illimitées — 5 montres en gratuit",
+      "dashboard": "Tableau de bord patrimonial : valeur & plus-value",
+      "weekly": "Cote actualisée chaque semaine — mensuelle en gratuit",
+      "scans": "Reconnaissances photo illimitées"
+    },
+    "annual": "Annuel",
+    "monthly": "Mensuel",
+    "perMonthEquiv": "soit %{price}/mois",
+    "perMonth": "par mois",
+    "trialCta": "Essai gratuit de 7 jours",
+    "restorePurchases": "Restaurer les achats",
+    "maybeLater": "Peut-être plus tard",
+    "legalPrefix": "Essai gratuit de 7 jours, puis %{monthly}/mois ou %{annual}/an selon la formule. Renouvellement automatique sauf résiliation au moins 24 h avant l'échéance — gérez ou résiliez dans Réglages › Abonnements. En souscrivant, vous acceptez nos ",
+    "legalTerms": "CGUV (EULA)",
+    "legalPrivacy": "Confidentialité",
+    "stubTitle": "Watchy est gratuit pendant la bêta",
+    "stubMessage": "Profitez de toutes les fonctionnalités — les abonnements arriveront plus tard.",
+    "welcomeTitle": "Bienvenue dans Premium",
+    "welcomeMessage": "Toute votre collection est débloquée.",
+    "purchaseErrorTitle": "Achat impossible",
+    "restoreTitle": "Restaurer",
+    "restoreStub": "Aucun achat à restaurer pendant la bêta.",
+    "restoredTitle": "Achats restaurés",
+    "restoredMessage": "Votre abonnement Premium est actif.",
+    "restoreNone": "Aucun abonnement actif trouvé pour ce compte.",
+    "restoreErrorTitle": "Restauration impossible"
+  },
+  "onboarding": {
+    "welcomeTagline": "Votre collection,\nsuivie et estimée.",
+    "welcomeSubtitle": "Photographiez, l'IA identifie, vous suivez la cote.",
+    "continueApple": "Continuer avec Apple",
+    "continueGoogle": "Continuer avec Google",
+    "continueEmail": "Continuer avec e-mail",
+    "continueGuest": "Continuer sans compte",
+    "accountFootnote": "Compte facultatif · création et suppression possibles à tout moment depuis votre profil.",
+    "signInError": "Connexion impossible",
+    "sourceTitle": "Comment nous avez-vous connu ?",
+    "sourceSubtitle": "Une seconde pour nous aider à faire connaître Watchy.",
+    "sources": {
+      "tiktok": "TikTok",
+      "instagram": "Instagram",
+      "app_store": "App Store",
+      "bouche_a_oreille": "Bouche-à-oreille",
+      "ami_collectionneur": "Un ami collectionneur",
+      "presse": "Presse / blog",
+      "autre": "Autre"
+    },
+    "profileTitle": "Et côté montres ?",
+    "profileSubtitle": "Facultatif — pour adapter Watchy à votre niveau.",
+    "ageLabel": "Votre tranche d'âge",
+    "skip": "Passer",
+    "cameraTitle": "Identifiez vos montres en un instant",
+    "cameraSubtitle": "Watchy utilise l'appareil photo uniquement pour analyser vos montres et remplir leur fiche. Aucune image n'est partagée sans votre accord.",
+    "cameraCta": "Activer l'appareil photo",
+    "notNow": "Pas maintenant",
+    "privacyTitle": "Vos données vous appartiennent",
+    "guarantees": {
+      "photos": "Photos et prix d'achat stockés pour vous seul.",
+      "noResale": "Jamais de revente de vos données personnelles.",
+      "anonymous": "Cotes agrégées de façon anonyme."
+    },
+    "optInTitle": "Aider à améliorer Watchy",
+    "optInSubtitle": "Statistiques d'usage anonymes",
+    "privacyCta": "J'ai compris"
+  },
+  "watchDetail": {
+    "edit": "Modifier",
+    "purchaseDate": "Date d'achat",
+    "purchasePrice": "Prix d'achat",
+    "papers": "Papiers",
+    "box": "Boîte d'origine",
+    "dialColor": "Couleur du cadran",
+    "year": "Année",
+    "condition": "État",
+    "notes": "Notes",
+    "currentValue": "Cote actuelle",
+    "valuePending": "Recherche de cote en cours — revenez un peu plus tard.",
+    "linkModelHint": "Reliez cette montre à un modèle du catalogue pour suivre sa cote.",
+    "deleteFromCollection": "Supprimer de ma collection"
+  },
+  "market": {
+    "heroLabel": "Cote de marché · aujourd'hui",
+    "sinceYear": "depuis %{year}",
+    "chartEmpty": "Pas encore assez d'historique.\nLa cote s'enrichit à chaque mise à jour.",
+    "periodYear": "1A",
+    "historySince": "Historique depuis le %{date} — il s'étoffe à chaque mise à jour de cote.",
+    "capitalGain": "Plus-value",
+    "fullSet": "Cote full set (boîte + papiers)",
+    "source": "Source : %{source}",
+    "aiDisclaimer": "Estimation générée par intelligence artificielle, uniquement indicative — ni expertise d'authenticité, ni estimation opposable, ni conseil d'investissement."
+  },
+  "watchEdit": {
+    "title": "Modifier la montre",
+    "requiredTitle": "Champs requis",
+    "requiredMessage": "La marque et le modèle ne peuvent pas être vides.",
+    "invalidPriceTitle": "Prix invalide",
+    "invalidPriceMessage": "Le prix d'achat doit être un nombre positif.",
+    "invalidYearTitle": "Année invalide",
+    "invalidYearMessage": "L'année doit être comprise entre 1900 et %{maxYear}.",
+    "saveErrorTitle": "Enregistrement impossible",
+    "brandPlaceholder": "Marque",
+    "modelPlaceholder": "Modèle",
+    "nicknamePlaceholder": "Surnom (ex. Pepsi, Hulk…)",
+    "dialColorPlaceholder": "ex. vert menthe",
+    "notesPlaceholder": "Historique, révision, particularités…",
+    "saving": "Enregistrement…"
+  },
+  "profileEdit": {
+    "hint": "Tout est facultatif. Ces informations restent privées et sont supprimées avec votre compte.",
+    "expertise": "Connaissance horlogère",
+    "ageRange": "Tranche d'âge",
+    "location": "Localisation",
+    "cityPlaceholder": "Ville (ex. Avignon)",
+    "countryPlaceholder": "Pays (ex. France)",
+    "locationHint": "Ville et pays suffisent — nous ne demandons jamais d'adresse complète."
+  },
+  "resetPassword": {
+    "title": "Nouveau mot de passe",
+    "invalidLink": "Lien invalide ou expiré — redemandez un e-mail de réinitialisation.",
+    "minChars": "8 caractères minimum.",
+    "changedTitle": "Mot de passe changé",
+    "changedMessage": "Vous êtes connecté.",
+    "newPasswordPlaceholder": "Nouveau mot de passe (8 caractères min.)",
+    "cta": "Changer le mot de passe"
+  },
+  "labels": {
+    "conditions": {
+      "neuf": "Neuf",
+      "tres_bon": "Très bon",
+      "bon": "Bon",
+      "use": "Usé"
+    },
+    "expertise": {
+      "novice": "Novice",
+      "passionne": "Passionné",
+      "collectionneur": "Collectionneur",
+      "metier": "C'est mon métier"
+    }
+  },
+  "legal": {
+    "termsShort": "CGUV",
+    "termsTitle": "Conditions d'utilisation",
+    "privacyTitle": "Politique de confidentialité",
+    "noticeTitle": "Mentions légales",
+    "updated": "Dernière mise à jour : %{date}"
+  },
+  "addWatch": {
+    "analyzing": "Analyse en cours…",
+    "analyzingSubtitle": "Identification du boîtier & du cadran",
+    "choosePhoto": "Choisir une photo",
+    "identified": "Identifiée · confiance %{confidence}%",
+    "reference": "Réf. %{reference}",
+    "estimatedValue": "Cote de marché estimée",
+    "addToCollection": "Ajouter à la collection",
+    "notThisOne": "Ce n'est pas ça ?",
+    "fallbackSubtitle": "Cherchez-la dans la base de modèles\nou saisissez-la manuellement."
+  },
+  "profile": {
+    "title": "Profil",
+    "guestAccount": "Compte invité",
+    "guestSubtitle": "Créez un compte pour sécuriser vos données",
+    "emailLabel": "Email",
+    "subscriptionLabel": "Abonnement",
+    "freePlan": "Gratuit · %{used}/%{limit} montres (collection + wishlist)",
+    "subscriptionTitle": "Abonnement Premium",
+    "subscriptionActive": "Votre abonnement est actif.",
+    "manageInSettings": "Gérer dans les Réglages",
+    "restorePurchases": "Restaurer mes achats",
+    "restored": "Abonnement restauré.",
+    "restoreNone": "Aucun abonnement trouvé pour ce compte.",
+    "close": "Fermer",
+    "myInfo": "Mes informations",
+    "myInfoSubtitle": "Connaissance horlogère, âge, localisation",
+    "language": "Langue",
+    "languageTitle": "Langue de l'application",
+    "languageAuto": "Automatique (appareil)",
+    "signOut": "Se déconnecter",
+    "deleteAccountTitle": "Supprimer mon compte",
+    "deleteAccountSubtitle": "Efface définitivement toutes vos données",
+    "deleteAccountMessage": "Votre compte, votre collection, vos photos et votre wishlist seront définitivement effacés. Cette action est irréversible.",
+    "deleteAccountConfirm": "Supprimer définitivement",
+    "deleteAccountErrorTitle": "Suppression impossible",
+    "deleteAccountErrorFallback": "Réessayez ou contactez-nous."
+  },
+  "premiumGate": {
+    "limitTitle": "Limite atteinte",
+    "seePremium": "Voir Premium"
+  },
+  "purchases": {
+    "offerUnavailable": "Offre indisponible pour le moment — réessayez plus tard."
+  },
+  "modelSearch": {
+    "brandPlaceholder": "Marque *",
+    "modelPlaceholder": "Modèle *",
+    "referencePlaceholder": "Référence",
+    "backToSearch": "Revenir à la recherche",
+    "searchPlaceholder": "Marque, modèle ou référence…",
+    "suggestions": "Suggestions de la base",
+    "noResult": "Aucun modèle trouvé",
+    "manualEntry": "Saisir manuellement"
+  },
+  "completionBar": {
+    "label": "Fiche complétée"
+  },
+  "onboardingLib": {
+    "guestError": "Création du compte invité impossible"
+  },
+  "oauth": {
+    "notConfigured": "Ce mode de connexion n'est pas encore configuré côté serveur. Utilisez l'e-mail ou continuez sans compte.",
+    "appleNoToken": "Apple n'a pas fourni de jeton d'identité — réessayez.",
+    "missingUrl": "URL OAuth manquante — réessayez.",
+    "refused": "Connexion refusée",
+    "missingCode": "Code OAuth manquant dans la réponse."
+  }
+}

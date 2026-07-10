@@ -2,26 +2,36 @@
   "expo": {
     "name": "watchy",
     "slug": "watchy",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "watchy",
     "userInterfaceStyle": "dark",
     "ios": {
-      "bundleIdentifier": "com.tomdebout.watchy",
+      "bundleIdentifier": "com.watchy-app.watchy",
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleDevelopmentRegion": "fr"
       }
     },
+    "locales": {
+      "fr": "./languages/fr.json",
+      "en": "./languages/en.json"
+    },
     "android": {
-      "package": "com.tomdebout.watchy",
+      "package": "com.watchyapp.watchy",
       "adaptiveIcon": {
         "backgroundColor": "#eef1f5",
         "foregroundImage": "./assets/images/watchy-icon.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "output": "static",
@@ -54,11 +64,19 @@
       ],
       "expo-secure-store",
       "@react-native-community/datetimepicker",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8e57eb43-0cb5-4a46-9273-16fa63105ac3"
+      }
+    },
+    "owner": "debouttom"
   }
 }

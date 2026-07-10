@@ -7,6 +7,7 @@ import type { WatchModel } from '@watchy/types';
 
 import { useWatchModelSearch } from '@/hooks/use-watch-models';
 import { Brand, Fonts, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { WatchDial } from '@/components/watch-dial';
@@ -27,6 +28,7 @@ export function ModelSearch({
   submitLabel: string;
   busy: boolean;
 }) {
+  const t = useT();
   const [query, setQuery] = useState('');
   const [manual, setManual] = useState(false);
   const [brand, setBrand] = useState('');
@@ -41,7 +43,7 @@ export function ModelSearch({
         <GlassCard style={styles.manualCard}>
           <TextInput
             style={styles.manualInput}
-            placeholder="Marque *"
+            placeholder={t('modelSearch.brandPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={brand}
             onChangeText={setBrand}
@@ -49,7 +51,7 @@ export function ModelSearch({
           <View style={styles.manualDivider} />
           <TextInput
             style={styles.manualInput}
-            placeholder="Modèle *"
+            placeholder={t('modelSearch.modelPlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={model}
             onChangeText={setModel}
@@ -57,7 +59,7 @@ export function ModelSearch({
           <View style={styles.manualDivider} />
           <TextInput
             style={styles.manualInput}
-            placeholder="Référence"
+            placeholder={t('modelSearch.referencePlaceholder')}
             placeholderTextColor={Brand.inkTertiary}
             value={reference}
             onChangeText={setReference}
@@ -86,7 +88,7 @@ export function ModelSearch({
         </Pressable>
         <Pressable onPress={() => setManual(false)} style={styles.manualLink} hitSlop={8}>
           <ThemedText type="link" themeColor="interactive">
-            Revenir à la recherche
+            {t('modelSearch.backToSearch')}
           </ThemedText>
         </Pressable>
       </Animated.View>
@@ -99,7 +101,7 @@ export function ModelSearch({
         <SymbolView name="magnifyingglass" size={15} tintColor={Brand.inkTertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Marque, modèle ou référence…"
+          placeholder={t('modelSearch.searchPlaceholder')}
           placeholderTextColor={Brand.inkTertiary}
           value={query}
           onChangeText={setQuery}
@@ -111,7 +113,7 @@ export function ModelSearch({
       {suggestions.length > 0 ? (
         <>
           <ThemedText type="overline" themeColor="textSecondary" style={styles.suggestionsLabel}>
-            Suggestions de la base
+            {t('modelSearch.suggestions')}
           </ThemedText>
           {suggestions.map((m) => (
             <GlassCard key={m.id} style={styles.suggestionCard}>
@@ -142,13 +144,13 @@ export function ModelSearch({
         </>
       ) : query.trim().length >= 2 && !search.isLoading ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.noResult}>
-          Aucun modèle trouvé
+          {t('modelSearch.noResult')}
         </ThemedText>
       ) : null}
 
       <Pressable onPress={() => setManual(true)} style={styles.manualLink} hitSlop={8}>
         <ThemedText type="link" themeColor="interactive">
-          Saisir manuellement
+          {t('modelSearch.manualEntry')}
         </ThemedText>
       </Pressable>
     </Animated.View>

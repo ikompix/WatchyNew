@@ -40,8 +40,8 @@ try {
   // 1. /me à l'état initial
   let res = await fetch(`${API}/me`, { headers });
   let me = (await res.json()).data;
-  expect(res.status === 200 && me.plan === 'free' && me.watchCount === 0 && me.watchLimit === 5,
-    `GET /me initial → free 0/5 (reçu ${me?.plan} ${me?.watchCount}/${me?.watchLimit})`);
+  expect(res.status === 200 && me.plan === 'free' && me.slotsUsed === 0 && me.slotsLimit === 5,
+    `GET /me initial → free 0/5 emplacements (reçu ${me?.plan} ${me?.slotsUsed}/${me?.slotsLimit})`);
 
   // 2. 5 montres passent, la 6ᵉ est bloquée
   for (let i = 1; i <= 5; i++) {
@@ -101,8 +101,8 @@ try {
 
   res = await fetch(`${API}/me`, { headers });
   me = (await res.json()).data;
-  expect(me?.plan === 'premium' && me?.watchLimit === null,
-    `GET /me après webhook → premium illimité (reçu ${me?.plan} ${me?.watchLimit})`);
+  expect(me?.plan === 'premium' && me?.slotsLimit === null,
+    `GET /me après webhook → premium illimité (reçu ${me?.plan} ${me?.slotsLimit})`);
 
   // 6. En premium : la 6ᵉ montre passe, le portfolio répond
   res = await fetch(`${API}/watches`, {
@@ -116,14 +116,7 @@ try {
   expect(res.status === 200 && body.data?.totalWatches === 6 && body.data?.totalPurchase === 15000,
     `GET /portfolio premium → 6 montres, achat 15 000 € (reçu ${body.data?.totalWatches} / ${body.data?.totalPurchase})`);
 
-  // 7. Rapport d'expert : accessible (vide) en premium — pas de génération (coût IA)
-  const firstWatch = (await (await fetch(`${API}/watches`, { headers })).json()).data[0];
-  res = await fetch(`${API}/watches/${firstWatch.id}/expert-report`, { headers });
-  body = await res.json();
-  expect(res.status === 200 && body.data?.report === null && body.data?.generating === false,
-    `GET expert-report premium → 200 vide (reçu ${res.status})`);
-
-  // 8. Expiration : le webhook EXPIRATION repasse en free
+  // 7. Expiration : le webhook EXPIRATION repasse en free
   res = await fetch(`${API}/webhooks/revenuecat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${WEBHOOK_SECRET}` },
@@ -133,7 +126,7 @@ try {
   expect(res.status === 200 && me?.plan === 'free',
     `webhook EXPIRATION → retour free (reçu ${me?.plan})`);
 
-  // 9. Transfert d'achats entre comptes Apple : le premium suit le nouveau compte
+  // 8. Transfert d'achats entre comptes Apple : le premium suit le nouveau compte
   res = await fetch(`${API}/webhooks/revenuecat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${WEBHOOK_SECRET}` },

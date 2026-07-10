@@ -6,17 +6,19 @@ import { SymbolView } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Brand, Gutter, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
 import { PrimaryButton } from '@/components/primary-button';
 
 export default function CameraPrimer() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [, requestPermission] = useCameraPermissions();
 
   function next() {
-    router.push('/(onboarding)/notifications');
+    router.push('/(onboarding)/privacy');
   }
 
   async function enableCamera() {
@@ -44,19 +46,18 @@ export default function CameraPrimer() {
         </LinearGradient>
 
         <ThemedText type="title" style={styles.title}>
-          Identifiez vos montres en un instant
+          {t('onboarding.cameraTitle')}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          Watchy utilise l'appareil photo uniquement pour analyser vos montres et remplir leur
-          fiche. Aucune image n'est partagée sans votre accord.
+          {t('onboarding.cameraSubtitle')}
         </ThemedText>
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Activer l'appareil photo" onPress={enableCamera} />
+        <PrimaryButton label={t('onboarding.cameraCta')} onPress={enableCamera} />
         <Pressable onPress={next} style={styles.skipLink} hitSlop={8}>
           <ThemedText type="link" themeColor="textSecondary">
-            Pas maintenant
+            {t('onboarding.notNow')}
           </ThemedText>
         </Pressable>
       </View>

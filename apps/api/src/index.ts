@@ -11,8 +11,21 @@ import { meRouter } from './routes/me.js';
 import { wishlistRouter } from './routes/wishlist.js';
 import { portfolioRouter } from './routes/portfolio.js';
 import { webhooksRouter } from './routes/webhooks.js';
+import { legalRouter } from './routes/legal.js';
+import { pagesRouter } from './routes/pages.js';
+import { adminRouter } from './routes/admin.js';
 
 const app = new Hono();
+
+// Les erreurs non gérées doivent être visibles dans les logs du provider
+// (sinon Railway n'affiche qu'un « Internal Server Error » muet)
+app.onError((err, c) => {
+  console.error(`[api] ${c.req.method} ${c.req.path}:`, err);
+  return c.json(
+    { data: null, error: { code: 'INTERNAL', message: 'Erreur interne — réessayez.' } },
+    500
+  );
+});
 
 // L'app mobile native n'est pas soumise au CORS — n'ouvrir qu'aux origines
 // web explicitement autorisées (vide par défaut)
@@ -37,6 +50,12 @@ app.route('/portfolio', portfolioRouter);
 app.route('/auth', authRouter);
 // Pas d'authMiddleware : RevenueCat s'authentifie par secret partagé
 app.route('/webhooks', webhooksRouter);
+// Pages légales publiques (exigence App Store Connect)
+app.route('/legal', legalRouter);
+// Back office (jeton ADMIN_TOKEN, cookie httpOnly)
+app.route('/admin', adminRouter);
+// Pages d'atterrissage auth (site_url Supabase → /confirmed)
+app.route('/', pagesRouter);
 
 const port = Number(process.env.PORT ?? 3000);
 
@@ -44,12 +63,3 @@ serve({ fetch: app.fetch, port }, () => {
   console.log(`API running on http://localhost:${port}`);
 });
 
-// Alertes de prix wishlist — passage périodique en process (instance unique).
-// Pas d'exécution au démarrage : tsx watch redémarre souvent en dev et chaque
-// passage peut déclencher des recherches de cote IA payantes.
-const ALERTS_INTERVAL_MS = 6 * 3600 * 1000;
-setInterval(() => {
-  import('./lib/price-alerts.js')
-    .then(({ checkPriceAlerts }) => checkPriceAlerts())
-    .catch((err) => console.error('[alerts]', err));
-}, ALERTS_INTERVAL_MS);

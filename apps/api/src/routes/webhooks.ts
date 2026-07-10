@@ -16,6 +16,7 @@ interface RevenueCatEvent {
   type?: string;
   app_user_id?: string;
   original_app_user_id?: string;
+  product_id?: string;
   expiration_at_ms?: number | null;
   transferred_from?: string[];
   transferred_to?: string[];
@@ -77,12 +78,13 @@ router.post('/revenuecat', async (c) => {
 
   if (PREMIUM_EVENTS.has(event.type)) {
     const expiresAt = event.expiration_at_ms ? new Date(event.expiration_at_ms) : null;
+    const productId = event.product_id ?? null;
     await db
       .insert(entitlements)
-      .values({ userId: appUserId, plan: 'premium', source: 'revenuecat', expiresAt, rcAppUserId: appUserId })
+      .values({ userId: appUserId, plan: 'premium', source: 'revenuecat', productId, expiresAt, rcAppUserId: appUserId })
       .onConflictDoUpdate({
         target: entitlements.userId,
-        set: { plan: 'premium', source: 'revenuecat', expiresAt, rcAppUserId: appUserId, updatedAt: new Date() },
+        set: { plan: 'premium', source: 'revenuecat', productId, expiresAt, rcAppUserId: appUserId, updatedAt: new Date() },
       });
     console.log(`[revenuecat] ${appUserId} → premium (${event.type})`);
   } else if (event.type === 'BILLING_ISSUE') {

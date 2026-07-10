@@ -5,6 +5,7 @@ export interface CreateWatchDto {
   brand: string;
   model: string;
   reference?: string;
+  nickname?: string;
   photoUrl?: string;
   dialColor?: string;
   productionYear?: number;
@@ -16,7 +17,23 @@ export interface CreateWatchDto {
   notes?: string;
 }
 
-export type UpdateWatchDto = Partial<CreateWatchDto>;
+/** PATCH partiel : champ absent = inchangé, `null` = effacé. */
+export type UpdateWatchDto = {
+  brand?: string;
+  model?: string;
+  hasPapers?: boolean;
+  hasBox?: boolean;
+  watchModelId?: string;
+  photoUrl?: string;
+  reference?: string | null;
+  nickname?: string | null;
+  dialColor?: string | null;
+  productionYear?: number | null;
+  condition?: WatchCondition | null;
+  purchasePrice?: number | null;
+  purchaseDate?: string | null;
+  notes?: string | null;
+};
 
 export interface RecognizeWatchDto {
   imageBase64: string;
@@ -39,6 +56,8 @@ export interface RecognizeWatchResult {
   reference: string | null;
   /** Couleur du cadran vue sur la photo (français), null si incertain */
   dialColor: string | null;
+  /** Surnom de collectionneurs largement établi pour la référence identifiée, null sinon */
+  nickname: string | null;
   referenceCandidates: ReferenceCandidate[];
   matched: WatchModel | null;
   alternatives: WatchModel[];
@@ -53,11 +72,25 @@ export interface CollectionSummary {
 
 export type Plan = 'free' | 'premium';
 
+export type AgeRange = '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+';
+export type Expertise = 'novice' | 'passionne' | 'collectionneur' | 'metier';
+
+/** Profil déclaratif facultatif — volontairement non sensible (tranche d'âge, ville/pays). */
+export interface UserProfile {
+  ageRange: AgeRange | null;
+  city: string | null;
+  country: string | null;
+  expertise: Expertise | null;
+}
+
 export interface MeResult {
   plan: Plan;
   watchCount: number;
+  wishlistCount: number;
+  /** Emplacements occupés (collection + wishlist) — quota free combiné */
+  slotsUsed: number;
   /** null = illimité (premium) */
-  watchLimit: number | null;
+  slotsLimit: number | null;
   scansUsed: number;
   scansLimit: number | null;
 }
@@ -87,31 +120,18 @@ export interface PortfolioSummary {
   watches: PortfolioWatchValuation[];
 }
 
-export interface ExpertReport {
-  watchId: string;
-  content: string;
-  model: string;
-  createdAt: string;
-}
-
-export interface ExpertReportStatus {
-  report: ExpertReport | null;
-  /** true = génération en cours, le client repolle le GET */
-  generating: boolean;
-  /** true = la montre a été modifiée après la génération, rapport à rafraîchir */
-  stale: boolean;
-}
-
 export interface WishlistItem {
   id: string;
   watchModelId: string;
-  /** Non null = alerte de prix active (premium) */
-  targetPrice: number | null;
+  /** Photo facultative uploadée par l'utilisateur (visuel de l'item) */
+  photoUrl: string | null;
   createdAt: string;
   model: WatchModel;
   /** Dernière cote de base connue du modèle */
   currentPrice: number | null;
   currency: string;
+  /** Compte free au-delà du quota : verrouillé en lecture, jamais supprimé */
+  locked?: boolean;
 }
 
 export interface AddWishlistItemDto {
@@ -121,11 +141,7 @@ export interface AddWishlistItemDto {
   brand?: string;
   model?: string;
   reference?: string;
-  targetPrice?: number;
-}
-
-export interface UpdateWishlistItemDto {
-  targetPrice: number | null;
+  photoUrl?: string;
 }
 
 export type ApiSuccess<T> = { data: T; error: null };

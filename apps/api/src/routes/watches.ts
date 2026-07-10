@@ -2,14 +2,12 @@ import { Hono } from 'hono';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db/index.js';
-import { expertReports, watches } from '../db/schema.js';
+import { watches } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { countWatches, FREE_WATCH_LIMIT, getPlan } from '../lib/entitlements.js';
-import { generateReportInBackground, reportGenerating } from '../lib/expert-report.js';
-import { marketResearchAvailable } from '../lib/market-research.js';
+import { countSlots, FREE_SLOT_LIMIT, getLockedIds, getPlan } from '../lib/entitlements.js';
+import { nicknameForReference } from '../lib/nickname-map.js';
 import { computeCompletionPct } from '@watchy/types';
-import type { CreateWatchDto, UpdateWatchDto, ApiResponse } from '@watchy/types';
-import type { ExpertReport, ExpertReportStatus, Watch } from '@watchy/types';
+import type { CreateWatchDto, UpdateWatchDto, ApiResponse, Watch } from '@watchy/types';
 
 const router = new Hono<{ Variables: { userId: string } }>();
 
@@ -20,6 +18,7 @@ const createWatchSchema = z.object({
   brand: z.string().min(1),
   model: z.string().min(1),
   reference: z.string().optional(),
+  nickname: z.string().min(1).max(80).optional(),
   photoUrl: z.string().url().optional(),
   dialColor: z.string().min(1).max(80).optional(),
   productionYear: z
@@ -36,10 +35,31 @@ const createWatchSchema = z.object({
   notes: z.string().optional(),
 });
 
+// PATCH : champ absent = inchangé, null = effacé (formulaire d'édition « tout d'un coup »)
+const updateWatchSchema = createWatchSchema.partial().extend({
+  reference: z.string().nullish(),
+  nickname: z.string().min(1).max(80).nullish(),
+  dialColor: z.string().min(1).max(80).nullish(),
+  productionYear: z
+    .number()
+    .int()
+    .min(1900)
+    .max(new Date().getFullYear())
+    .nullish(),
+  condition: z.enum(['neuf', 'tres_bon', 'bon', 'use']).nullish(),
+  purchasePrice: z.number().positive().nullish(),
+  purchaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  notes: z.string().nullish(),
+});
+
 router.get('/', async (c) => {
   const userId = c.get('userId');
-  const rows = await db.select().from(watches).where(eq(watches.userId, userId));
-  return c.json<ApiResponse<Watch[]>>({ data: rows as unknown as Watch[], error: null });
+  const [rows, locked] = await Promise.all([
+    db.select().from(watches).where(eq(watches.userId, userId)),
+    getLockedIds(userId),
+  ]);
+  const data = rows.map((r) => ({ ...r, locked: locked.watchIds.has(r.id) }));
+  return c.json<ApiResponse<Watch[]>>({ data: data as unknown as Watch[], error: null });
 });
 
 router.post('/', async (c) => {
@@ -54,15 +74,16 @@ router.post('/', async (c) => {
     );
   }
 
-  // Plan free : 5 montres max. Grandfathering doux — l'existant au-delà
-  // de la limite n'est jamais supprimé, seul l'ajout est bloqué.
-  if ((await getPlan(userId)) === 'free' && (await countWatches(userId)) >= FREE_WATCH_LIMIT) {
+  // Plan free : 5 emplacements EN TOUT (collection + wishlist). L'existant
+  // au-delà de la limite n'est jamais supprimé — il est verrouillé en lecture
+  // (voir getLockedIds), la suppression restant possible pour libérer un slot.
+  if ((await getPlan(userId)) === 'free' && (await countSlots(userId)) >= FREE_SLOT_LIMIT) {
     return c.json<ApiResponse<never>>(
       {
         data: null,
         error: {
           code: 'QUOTA_EXCEEDED',
-          message: `Limite de ${FREE_WATCH_LIMIT} montres atteinte — passez à Premium pour une collection illimitée.`,
+          message: `Limite de ${FREE_SLOT_LIMIT} montres atteinte (collection + wishlist) — passez à Premium pour l'illimité.`,
         },
       },
       403
@@ -90,6 +111,8 @@ router.post('/', async (c) => {
       brand: dto.brand,
       model: dto.model,
       reference: dto.reference,
+      // Surnom fourni (reco IA), sinon déduit de la référence (saisie manuelle)
+      nickname: dto.nickname ?? nicknameForReference(dto.reference),
       photoUrl: dto.photoUrl,
       dialColor: dto.dialColor,
       productionYear: dto.productionYear,
@@ -120,6 +143,18 @@ router.get('/:id', async (c) => {
       404
     );
   }
+  if ((await getLockedIds(userId)).watchIds.has(id)) {
+    return c.json<ApiResponse<never>>(
+      {
+        data: null,
+        error: {
+          code: 'PREMIUM_REQUIRED',
+          message: 'Cette montre est verrouillée — repassez à Premium pour y accéder.',
+        },
+      },
+      403
+    );
+  }
   return c.json<ApiResponse<Watch>>({ data: row as unknown as Watch, error: null });
 });
 
@@ -127,7 +162,7 @@ router.patch('/:id', async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
   const body = await c.req.json<UpdateWatchDto>();
-  const parsed = createWatchSchema.partial().safeParse(body);
+  const parsed = updateWatchSchema.safeParse(body);
 
   if (!parsed.success) {
     return c.json<ApiResponse<never>>(
@@ -147,8 +182,28 @@ router.patch('/:id', async (c) => {
       404
     );
   }
+  if ((await getLockedIds(userId)).watchIds.has(id)) {
+    return c.json<ApiResponse<never>>(
+      {
+        data: null,
+        error: {
+          code: 'PREMIUM_REQUIRED',
+          message: 'Cette montre est verrouillée — repassez à Premium pour y accéder.',
+        },
+      },
+      403
+    );
+  }
 
   const dto = parsed.data;
+  // Référence modifiée sans surnom saisi : l'ancien surnom désignait
+  // l'ancienne référence — recalculé depuis le mapping (possiblement null)
+  if (dto.nickname == null && dto.reference !== undefined) {
+    const norm = (r: string | null | undefined) => r?.trim().toLowerCase() ?? null;
+    if (norm(dto.reference) !== norm(existing.reference)) {
+      dto.nickname = nicknameForReference(dto.reference);
+    }
+  }
   const merged = { ...existing, ...dto };
   const completionPct = computeCompletionPct({
     photoUrl: merged.photoUrl ?? null,
@@ -166,7 +221,12 @@ router.patch('/:id', async (c) => {
     .update(watches)
     .set({
       ...dto,
-      purchasePrice: dto.purchasePrice?.toString(),
+      purchasePrice:
+        dto.purchasePrice === undefined
+          ? undefined
+          : dto.purchasePrice === null
+            ? null
+            : dto.purchasePrice.toString(),
       completionPct,
       updatedAt: new Date(),
     })
@@ -174,91 +234,6 @@ router.patch('/:id', async (c) => {
     .returning();
 
   return c.json<ApiResponse<Watch>>({ data: updated as unknown as Watch, error: null });
-});
-
-// --- Rapport d'expert IA (premium) ---------------------------------------
-
-type ReportContext =
-  | { ok: true; watch: typeof watches.$inferSelect; report: typeof expertReports.$inferSelect | null }
-  | { ok: false; status: 403 | 404; code: string; message: string };
-
-async function loadReportContext(userId: string, watchId: string): Promise<ReportContext> {
-  if ((await getPlan(userId)) !== 'premium') {
-    return {
-      ok: false,
-      status: 403,
-      code: 'PREMIUM_REQUIRED',
-      message: "Le rapport d'expert est réservé aux membres Premium.",
-    };
-  }
-  const [watch] = await db
-    .select()
-    .from(watches)
-    .where(and(eq(watches.id, watchId), eq(watches.userId, userId)));
-  if (!watch) {
-    return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Watch not found' };
-  }
-  const [report] = await db.select().from(expertReports).where(eq(expertReports.watchId, watchId));
-  return { ok: true, watch, report: report ?? null };
-}
-
-function toStatus(ctx: Extract<ReportContext, { ok: true }>): ExpertReportStatus {
-  const { watch, report } = ctx;
-  return {
-    report: report
-      ? ({
-          watchId: report.watchId,
-          content: report.content,
-          model: report.model,
-          createdAt: report.createdAt.toISOString(),
-        } satisfies ExpertReport)
-      : null,
-    generating: reportGenerating(watch.id),
-    // La montre a changé (variante, état…) après la génération → à rafraîchir
-    stale: report != null && watch.updatedAt > report.createdAt,
-  };
-}
-
-router.get('/:id/expert-report', async (c) => {
-  const ctx = await loadReportContext(c.get('userId'), c.req.param('id'));
-  if (!ctx.ok) {
-    return c.json<ApiResponse<never>>(
-      { data: null, error: { code: ctx.code, message: ctx.message } },
-      ctx.status
-    );
-  }
-  return c.json<ApiResponse<ExpertReportStatus>>({ data: toStatus(ctx), error: null });
-});
-
-router.post('/:id/expert-report', async (c) => {
-  const ctx = await loadReportContext(c.get('userId'), c.req.param('id'));
-  if (!ctx.ok) {
-    return c.json<ApiResponse<never>>(
-      { data: null, error: { code: ctx.code, message: ctx.message } },
-      ctx.status
-    );
-  }
-
-  const current = toStatus(ctx);
-  // Rapport à jour : rien à générer
-  if (current.report && !current.stale) {
-    return c.json<ApiResponse<ExpertReportStatus>>({ data: current, error: null });
-  }
-  if (!marketResearchAvailable()) {
-    return c.json<ApiResponse<never>>(
-      {
-        data: null,
-        error: { code: 'AI_UNAVAILABLE', message: "La génération de rapports est momentanément indisponible." },
-      },
-      503
-    );
-  }
-
-  generateReportInBackground(ctx.watch.id);
-  return c.json<ApiResponse<ExpertReportStatus>>(
-    { data: { ...current, generating: true }, error: null },
-    202
-  );
 });
 
 router.delete('/:id', async (c) => {

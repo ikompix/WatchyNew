@@ -5,10 +5,12 @@ project_id = "watchy"
 
 [auth]
 # URLs de retour OAuth autorisées : scheme natif (dev build) + Expo Go (exp://<ip>:8081/--/auth-callback)
-additional_redirect_urls = ["watchy://auth-callback", "exp://**"]
+additional_redirect_urls = ["watchy://auth-callback", "watchy://reset-password", "exp://**"]
 # Valeurs distantes épinglées : `config push` pousse TOUTE la section [auth],
 # les champs omis seraient écrasés par les défauts locaux de la CLI.
-site_url = "http://localhost:3000"
+# site_url = cible des liens e-mail (confirmation…) — page d'atterrissage
+# servie par l'API. Les flux OAuth mobiles passent leur propre redirectTo.
+site_url = "https://api.watchy-app.com/confirmed"
 
 [auth.mfa.totp]
 enroll_enabled = true
@@ -19,11 +21,39 @@ enable_confirmations = true
 max_frequency = "1m0s"
 otp_length = 8
 
+# SMTP custom via Resend (domaine watchy-app.com vérifié le 2026-07-05).
+# La clé est passée en env au moment du push, jamais committée :
+#   SUPABASE_AUTH_SMTP_PASS=re_… supabase config push
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(SUPABASE_AUTH_SMTP_PASS)"
+admin_email = "no-reply@watchy-app.com"
+sender_name = "Watchy"
+
+# Plafond d'envoi d'e-mails auth (par heure) — s'applique avec le SMTP custom
+[auth.rate_limit]
+email_sent = 100
+
+# Templates d'e-mails bilingues FR/EN aux couleurs Watchy (Supabase ne connaît
+# pas la langue de l'utilisateur : un seul e-mail, français puis anglais).
+# En prod (projet hébergé), ces templates se collent dans le dashboard
+# Authentication → Emails — ce fichier ne s'applique qu'au local.
+[auth.email.template.confirmation]
+subject = "Confirmez votre adresse · Confirm your email — Watchy"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Réinitialisez votre mot de passe · Reset your password — Watchy"
+content_path = "./supabase/templates/recovery.html"
+
 # Sign in with Apple — flux natif signInWithIdToken : pas de secret, seule
 # l'audience du jeton est vérifiée (Expo Go = host.exp.Exponent, dev build = bundle id).
 [auth.external.apple]
 enabled = true
-client_id = "host.exp.Exponent,com.tomdebout.watchy"
+client_id = "host.exp.Exponent,com.watchy-app.watchy"
 
 # Google OAuth — client de type « Application Web » dans Google Cloud Console,
 # URI de redirection : https://ahjbfjrauwarxlvzwcnq.supabase.co/auth/v1/callback

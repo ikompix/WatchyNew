@@ -31,8 +31,10 @@ import { useCreateWatch } from '@/hooks/use-watches';
 import { useRecognizeWatch } from '@/hooks/use-recognition';
 import { useModelEstimate } from '@/hooks/use-market-prices';
 import { ModelSearch } from '@/components/model-search';
-import { handlePremiumGate } from '@/lib/premium-gate';
+import { apiErrorMessage, handlePremiumGate } from '@/lib/premium-gate';
 import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
+import { formatCurrency } from '@/lib/format';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
@@ -40,12 +42,7 @@ import { WatchDial } from '@/components/watch-dial';
 
 const CONFIDENCE_THRESHOLD = 0.7;
 
-const euro = (value: number) =>
-  new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
+const euro = formatCurrency;
 
 type Step =
   | { name: 'viewfinder' }
@@ -77,32 +74,36 @@ function ScanLine({ height }: { height: number }) {
   );
 }
 
-/** Trois points qui clignotent, décalés (0/.2/.4s) */
-function AnalysisDots() {
-  const dots = [useSharedValue(0.3), useSharedValue(0.3), useSharedValue(0.3)];
+/** Un point qui clignote, avec un décalage de départ */
+function AnalysisDot({ delay }: { delay: number }) {
+  const opacity = useSharedValue(0.3);
   useEffect(() => {
-    dots.forEach((d, i) => {
-      d.value = withDelay(
-        i * 200,
-        withRepeat(
-          withSequence(withTiming(1, { duration: 400 }), withTiming(0.3, { duration: 400 })),
-          -1
-        )
-      );
-    });
+    opacity.value = withDelay(
+      delay,
+      withRepeat(
+        withSequence(withTiming(1, { duration: 400 }), withTiming(0.3, { duration: 400 })),
+        -1
+      )
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  return <Animated.View style={[styles.dot, style]} />;
+}
+
+/** Trois points qui clignotent, décalés (0/.2/.4s) */
+function AnalysisDots() {
   return (
     <View style={styles.dots}>
-      {dots.map((d, i) => {
-        const style = useAnimatedStyle(() => ({ opacity: d.value }));
-        return <Animated.View key={i} style={[styles.dot, style]} />;
-      })}
+      {[0, 200, 400].map((delay) => (
+        <AnalysisDot key={delay} delay={delay} />
+      ))}
     </View>
   );
 }
 
 export default function AddWatch() {
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const createWatch = useCreateWatch();
@@ -142,8 +143,8 @@ export default function AddWatch() {
         },
         onError: (err) => {
           // Quota de scans free épuisé → paywall ; la saisie manuelle reste ouverte
-          if (!handlePremiumGate(err, 'Limite de scans atteinte')) {
-            Alert.alert('Analyse impossible', err.message);
+          if (!handlePremiumGate(err, t('wishlist.scanLimitTitle'))) {
+            Alert.alert(t('wishlist.analysisErrorTitle'), apiErrorMessage(err));
           }
           setStep({ name: 'fallback', photoUrl: null });
         },
@@ -163,7 +164,7 @@ export default function AddWatch() {
     if (recognize.isPending) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', "Autorisez l'accès aux photos dans les réglages.");
+      Alert.alert(t('wishlist.photoPermissionTitle'), t('wishlist.photoPermissionMessage'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -184,6 +185,8 @@ export default function AddWatch() {
         brand: (result.matched?.brand ?? result.brand)!,
         model: (result.matched?.model ?? result.model)!,
         reference: result.matched?.reference ?? result.reference ?? undefined,
+        // Le surnom (« Pepsi », « Hulk »…) affine l'affichage et la cote
+        nickname: result.matched?.nickname ?? result.nickname ?? undefined,
         // La couleur vue par l'IA nourrit la cote de variante dès la création
         dialColor: result.dialColor ?? undefined,
         watchModelId: result.matched?.id,
@@ -192,7 +195,8 @@ export default function AddWatch() {
       {
         onSuccess: (w) => router.replace(`/watch/${w.id}`),
         onError: (err) => {
-          if (!handlePremiumGate(err, 'Limite de montres atteinte')) Alert.alert('Erreur', err.message);
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle')))
+            Alert.alert(t('common.errorTitle'), apiErrorMessage(err));
         },
       }
     );
@@ -204,13 +208,15 @@ export default function AddWatch() {
         brand: m.brand,
         model: m.model,
         reference: m.reference ?? undefined,
+        nickname: m.nickname ?? undefined,
         watchModelId: m.id,
         photoUrl: photoUrl ?? undefined,
       },
       {
         onSuccess: (w) => router.replace(`/watch/${w.id}`),
         onError: (err) => {
-          if (!handlePremiumGate(err, 'Limite de montres atteinte')) Alert.alert('Erreur', err.message);
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle')))
+            Alert.alert(t('common.errorTitle'), apiErrorMessage(err));
         },
       }
     );
@@ -262,10 +268,10 @@ export default function AddWatch() {
             <GlassCard style={styles.analysisCard}>
               <AnalysisDots />
               <ThemedText type="subtitle" style={styles.analysisTitle}>
-                Analyse en cours…
+                {t('addWatch.analyzing')}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Identification du boîtier & du cadran
+                {t('addWatch.analyzingSubtitle')}
               </ThemedText>
             </GlassCard>
           ) : hasCamera ? (
@@ -296,7 +302,7 @@ export default function AddWatch() {
                   style={styles.chamberCta}
                 >
                   <ThemedText type="link" style={styles.chamberCtaText}>
-                    Choisir une photo
+                    {t('addWatch.choosePhoto')}
                   </ThemedText>
                 </LinearGradient>
               </Pressable>
@@ -338,8 +344,9 @@ export default function AddWatch() {
           {
             onSuccess: (w) => router.replace(`/watch/${w.id}`),
             onError: (err) => {
-          if (!handlePremiumGate(err, 'Limite de montres atteinte')) Alert.alert('Erreur', err.message);
-        },
+              if (!handlePremiumGate(err, t('wishlist.watchLimitTitle')))
+                Alert.alert(t('common.errorTitle'), apiErrorMessage(err));
+            },
           }
         )
       }
@@ -363,6 +370,7 @@ function ResultSheet({
   onReject: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const market = useModelEstimate(result.matched?.id);
   const estimate = market.data?.latest?.price ?? null;
@@ -398,22 +406,24 @@ function ResultSheet({
         <GlassCard glow style={styles.sheet}>
           <View style={styles.confidenceBadge}>
             <ThemedText type="delta" style={styles.confidenceText}>
-              Identifiée · confiance {Math.round(result.confidence * 100)}%
+              {t('addWatch.identified', { confidence: Math.round(result.confidence * 100) })}
             </ThemedText>
           </View>
 
           <ThemedText style={styles.sheetBrand}>{brand}</ThemedText>
           <ThemedText type="default" themeColor="textSecondary" style={styles.sheetModel}>
             {model}
-            {result.matched?.nickname ? ` “${result.matched.nickname}”` : ''}
+            {(result.matched?.nickname ?? result.nickname) ? ` “${result.matched?.nickname ?? result.nickname}”` : ''}
           </ThemedText>
-          {reference ? <ThemedText type="code">Réf. {reference}</ThemedText> : null}
+          {reference ? (
+            <ThemedText type="code">{t('addWatch.reference', { reference })}</ThemedText>
+          ) : null}
 
           <View style={styles.sheetDivider} />
 
           <View style={styles.estimateRow}>
             <ThemedText type="small" themeColor="textSecondary">
-              Cote de marché estimée
+              {t('addWatch.estimatedValue')}
             </ThemedText>
             <ThemedText type="smallBold" style={styles.estimateValue}>
               {market.isLoading ? '…' : estimate != null ? `≈ ${euro(estimate)}` : '—'}
@@ -431,7 +441,7 @@ function ResultSheet({
                 <ActivityIndicator color="#ffffff" />
               ) : (
                 <ThemedText type="link" style={styles.ctaText}>
-                  Ajouter à la collection
+                  {t('addWatch.addToCollection')}
                 </ThemedText>
               )}
             </LinearGradient>
@@ -439,7 +449,7 @@ function ResultSheet({
 
           <Pressable onPress={onReject} hitSlop={8} style={styles.rejectLink}>
             <ThemedText type="link" themeColor="interactive">
-              Ce n'est pas ça ?
+              {t('addWatch.notThisOne')}
             </ThemedText>
           </Pressable>
         </GlassCard>
@@ -461,6 +471,7 @@ function FallbackSearch({
   onManualCreate: (brand: string, model: string, reference: string) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
 
   return (
@@ -493,17 +504,17 @@ function FallbackSearch({
           </LinearGradient>
         </View>
         <ThemedText type="subtitle" style={styles.fallbackTitle}>
-          Montre non reconnue
+          {t('wishlist.notRecognizedTitle')}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.fallbackSubtitle}>
-          Cherchez-la dans la base de modèles{'\n'}ou saisissez-la manuellement.
+          {t('addWatch.fallbackSubtitle')}
         </ThemedText>
 
         <View style={styles.fallbackBody}>
           <ModelSearch
             onSelectModel={onSelect}
             onManualSubmit={onManualCreate}
-            submitLabel="Ajouter à la collection"
+            submitLabel={t('addWatch.addToCollection')}
             busy={isCreating}
           />
         </View>

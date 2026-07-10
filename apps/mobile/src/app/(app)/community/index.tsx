@@ -4,32 +4,23 @@ import { SymbolView } from 'expo-symbols';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { useFeatureInterest, useRegisterInterest } from '@/hooks/use-feature-interest';
+import { apiErrorMessage } from '@/lib/premium-gate';
 import { Brand, Gutter, Radii, Spacing } from '@/constants/theme';
+import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { PrimaryButton } from '@/components/primary-button';
 
 const PITCH = [
-  {
-    icon: 'person.3' as const,
-    title: 'Des communautés créées par les membres',
-    text: 'Achat & revente, discussions par marque, conseils — les collectionneurs ont la main, pas nous.',
-  },
-  {
-    icon: 'text.bubble' as const,
-    title: 'Des fils de discussion',
-    text: 'Postez, commentez, échangez autour de vos montres, comme sur vos forums préférés.',
-  },
-  {
-    icon: 'lock' as const,
-    title: 'Profil public ou privé — vous décidez',
-    text: 'Montrez votre vitrine de collection… ou restez discret. Privé par défaut.',
-  },
+  { icon: 'person.3' as const, key: 'communities' as const },
+  { icon: 'text.bubble' as const, key: 'threads' as const },
+  { icon: 'lock' as const, key: 'privacy' as const },
 ];
 
 /** Teaser de la communauté (V2) — mesure l'intérêt des bêta-testeurs. */
 export default function CommunityTeaser() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { data } = useFeatureInterest();
   const register = useRegisterInterest();
@@ -37,7 +28,7 @@ export default function CommunityTeaser() {
 
   function notifyMe() {
     register.mutate('community', {
-      onError: (err) => Alert.alert('Réessayez', err.message),
+      onError: (err) => Alert.alert(t('common.retry'), apiErrorMessage(err)),
     });
   }
 
@@ -46,27 +37,27 @@ export default function CommunityTeaser() {
       <ScreenBackground />
       <View style={{ paddingTop: insets.top + 56, flex: 1 }}>
         <View style={styles.header}>
-          <ThemedText type="title">Communauté</ThemedText>
+          <ThemedText type="title">{t('community.title')}</ThemedText>
           <View style={styles.badge}>
             <ThemedText type="delta" style={styles.badgeText}>
-              Bientôt
+              {t('community.soon')}
             </ThemedText>
           </View>
         </View>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-          Le prochain chapitre de Watchy : échanger entre collectionneurs.
+          {t('community.subtitle')}
         </ThemedText>
 
         <View style={styles.cards}>
           {PITCH.map((item) => (
-            <GlassCard key={item.title} style={styles.card}>
+            <GlassCard key={item.key} style={styles.card}>
               <View style={styles.cardIcon}>
                 <SymbolView name={item.icon} size={17} tintColor={Brand.accent} />
               </View>
               <View style={styles.cardText}>
-                <ThemedText type="smallBold">{item.title}</ThemedText>
+                <ThemedText type="smallBold">{t(`community.pitch.${item.key}.title`)}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary" style={styles.cardBody}>
-                  {item.text}
+                  {t(`community.pitch.${item.key}.text`)}
                 </ThemedText>
               </View>
             </GlassCard>
@@ -80,7 +71,7 @@ export default function CommunityTeaser() {
           >
             <SymbolView name="crown.fill" size={14} tintColor="#ffffff" />
             <ThemedText type="small" style={styles.premiumText}>
-              Les membres Premium pourront créer leurs propres communautés.
+              {t('community.premiumStrip')}
             </ThemedText>
           </LinearGradient>
         </View>
@@ -89,10 +80,14 @@ export default function CommunityTeaser() {
           {notified ? (
             <View style={styles.notifiedRow}>
               <SymbolView name="checkmark.circle.fill" size={18} tintColor={Brand.positive} />
-              <ThemedText type="smallBold">On vous préviendra dès l'ouverture.</ThemedText>
+              <ThemedText type="smallBold">{t('community.notified')}</ThemedText>
             </View>
           ) : (
-            <PrimaryButton label="Me prévenir" onPress={notifyMe} loading={register.isPending} />
+            <PrimaryButton
+              label={t('community.notifyMe')}
+              onPress={notifyMe}
+              loading={register.isPending}
+            />
           )}
         </View>
       </View>

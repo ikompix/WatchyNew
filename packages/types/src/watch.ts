@@ -28,6 +28,8 @@ export interface Watch {
   brand: string;
   model: string;
   reference: string | null;
+  /** Surnom de collectionneurs (« Pepsi », « Hulk »…) — dénormalisé du modèle */
+  nickname: string | null;
   photoUrl: string | null;
   /** Couleur du cadran — critère de prix majeur à référence identique */
   dialColor: string | null;
@@ -41,6 +43,8 @@ export interface Watch {
   completionPct: number;
   createdAt: string;
   updatedAt: string;
+  /** Compte free au-delà du quota : verrouillée en lecture, jamais supprimée */
+  locked?: boolean;
 }
 
 export type WatchCompletionField =

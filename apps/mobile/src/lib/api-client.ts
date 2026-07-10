@@ -1,5 +1,6 @@
 import type { ApiResponse } from '@watchy/types';
 import { supabase } from './supabase';
+import { getActiveLocale } from './i18n';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL!;
 
@@ -12,6 +13,8 @@ async function getHeaders(): Promise<Record<string, string>> {
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${session.access_token}`,
+    // L'API adapte les sorties IA (reconnaissance…) à la langue de l'app
+    'Accept-Language': getActiveLocale(),
   };
 }
 

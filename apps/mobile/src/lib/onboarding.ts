@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { supabase } from './supabase';
+import { t } from './i18n';
 
 const ONBOARDED_KEY = 'watchy_onboarded';
 const ANALYTICS_KEY = 'watchy_analytics_optin';
@@ -30,7 +31,7 @@ export async function signInAsGuest(): Promise<void> {
     data: { email: string; password: string } | null;
     error: { message: string } | null;
   };
-  if (!json.data) throw new Error(json.error?.message ?? 'Création du compte invité impossible');
+  if (!json.data) throw new Error(json.error?.message ?? t('onboardingLib.guestError'));
 
   const { error } = await supabase.auth.signInWithPassword(json.data);
   if (error) throw new Error(error.message);

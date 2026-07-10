@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddWishlistItemDto, UpdateWishlistItemDto, WishlistItem } from '@watchy/types';
-import { apiDelete, apiGet, apiPatch, apiPost, unwrap } from '@/lib/api-client';
+import type { AddWishlistItemDto, WishlistItem } from '@watchy/types';
+import { apiDelete, apiGet, apiPost, unwrap } from '@/lib/api-client';
 
 export function useWishlist() {
   return useQuery({
@@ -23,16 +23,11 @@ export function useAddToWishlist() {
   return useMutation({
     mutationFn: async (dto: AddWishlistItemDto) =>
       unwrap(await apiPost<WishlistItem>('/wishlist', dto)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
-  });
-}
-
-export function useUpdateWishlistItem() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, dto }: { id: string; dto: UpdateWishlistItemDto }) =>
-      unwrap(await apiPatch<{ id: string; targetPrice: number | null }>(`/wishlist/${id}`, dto)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wishlist'] });
+      // Le quota combiné (collection + wishlist) vient de bouger
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
   });
 }
 
@@ -40,6 +35,9 @@ export function useRemoveFromWishlist() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => unwrap(await apiDelete<{ id: string }>(`/wishlist/${id}`)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wishlist'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
   });
 }

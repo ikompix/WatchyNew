@@ -19,11 +19,8 @@ export const watchModels = pgTable('watch_models', {
   canonicalName: text('canonical_name').notNull(),
   photoUrl: text('photo_url'),
   // Surnom de collectionneurs (« Batman », « Hulk »…) — identifie une référence
-  // précise, nourrit la recherche et la recherche de cote
+  // précise ; seedé en dur (catalog:nicknames) et détecté par la reco photo
   nickname: text('nickname'),
-  // Dernier passage d'enrichissement IA (photo + surnom) — même en échec :
-  // c'est le cache négatif qui évite de rejouer des recherches web coûteuses
-  enrichedAt: timestamp('enriched_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -38,6 +35,9 @@ export const watches = pgTable('watches', {
   brand: text('brand').notNull(),
   model: text('model').notNull(),
   reference: text('reference'),
+  // Surnom de collectionneurs dénormalisé (comme brand/model/reference) — la
+  // montre garde son identité même si le modèle catalogue disparaît
+  nickname: text('nickname'),
   photoUrl: text('photo_url'),
   // La couleur du cadran (et année/état) différencient le prix à référence égale
   dialColor: text('dial_color'),
@@ -73,8 +73,53 @@ export const entitlements = pgTable('entitlements', {
   userId: uuid('user_id').primaryKey(),
   plan: text('plan').notNull().default('free'), // 'free' | 'premium'
   source: text('source'), // 'revenuecat' | 'promo'
+  // Produit RevenueCat (watchy_premium_monthly / _annual) — distingue le MRR
+  productId: text('product_id'),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   rcAppUserId: text('rc_app_user_id'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Chaque appel IA persiste son coût (source du dashboard /admin/costs) —
+// les logs Railway s'évaporent, la DB non
+export const aiUsage = pgTable('ai_usage', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  label: text('label').notNull(),
+  model: text('model').notNull(),
+  costUsd: numeric('cost_usd', { precision: 10, scale: 4 }).notNull(),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+  searches: integer('searches').notNull().default(0),
+  userId: uuid('user_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Jetons d'accès au back office pour l'équipe — stockés hachés (sha256),
+// révocables individuellement ; le ADMIN_TOKEN d'env reste le jeton maître
+export const adminTokens = pgTable('admin_tokens', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  label: text('label').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+});
+
+// Réponse à « Comment nous avez-vous connu ? » (onboarding, facultatif)
+export const acquisitionSources = pgTable('acquisition_sources', {
+  userId: uuid('user_id').primaryKey(),
+  source: text('source').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Profil déclaratif FACULTATIF — minimisation volontaire (RGPD) : tranche
+// d'âge (pas de date de naissance), ville/pays (pas d'adresse postale)
+export const profiles = pgTable('profiles', {
+  userId: uuid('user_id').primaryKey(),
+  ageRange: text('age_range'), // '18-24' | '25-34' | '35-44' | '45-54' | '55-64' | '65+'
+  city: text('city'),
+  country: text('country'),
+  expertise: text('expertise'), // 'novice' | 'passionne' | 'collectionneur' | 'metier'
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -85,19 +130,9 @@ export const recognitionEvents = pgTable('recognition_events', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Cache du rapport d'expert IA — invalidé quand la montre est modifiée après createdAt
-export const expertReports = pgTable('expert_reports', {
-  watchId: uuid('watch_id')
-    .primaryKey()
-    .references(() => watches.id, { onDelete: 'cascade' }),
-  content: text('content').notNull(),
-  model: text('model').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
 // Wishlist : toujours liée à un modèle du catalogue (la saisie libre crée le
-// modèle — croissance organique, comme la reconnaissance). targetPrice non nul
-// = alerte de prix active (premium).
+// modèle — croissance organique, comme la reconnaissance). photoUrl = photo
+// facultative uploadée par l'utilisateur (visuel de l'item).
 export const wishlistItems = pgTable(
   'wishlist_items',
   {
@@ -106,9 +141,7 @@ export const wishlistItems = pgTable(
     watchModelId: uuid('watch_model_id')
       .notNull()
       .references(() => watchModels.id, { onDelete: 'cascade' }),
-    targetPrice: numeric('target_price', { precision: 12, scale: 2 }),
-    // Dernière notification envoyée — évite de re-notifier la même cote
-    notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    photoUrl: text('photo_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique('wishlist_user_model_unique').on(t.userId, t.watchModelId)]
@@ -141,4 +174,3 @@ export type WatchSelect = typeof watches.$inferSelect;
 export type MarketPriceInsert = typeof marketPrices.$inferInsert;
 export type MarketPriceSelect = typeof marketPrices.$inferSelect;
 export type EntitlementSelect = typeof entitlements.$inferSelect;
-export type ExpertReportSelect = typeof expertReports.$inferSelect;

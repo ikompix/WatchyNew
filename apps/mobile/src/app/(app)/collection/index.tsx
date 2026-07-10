@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -15,11 +16,14 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { SymbolView } from 'expo-symbols';
 import type { Watch } from '@watchy/types';
 
-import { useWatches } from '@/hooks/use-watches';
+import { useWatches, useDeleteWatch } from '@/hooks/use-watches';
 import { useCollectionMarket, type WatchValuation } from '@/hooks/use-collection-market';
 import { useMe } from '@/hooks/use-entitlement';
 import { usePortfolio } from '@/hooks/use-portfolio';
-import { Brand, Fonts, Gutter, Spacing } from '@/constants/theme';
+import { Brand, Gutter, Spacing } from '@/constants/theme';
+import { apiErrorMessage } from '@/lib/premium-gate';
+import { useT } from '@/lib/i18n';
+import { formatCurrency } from '@/lib/format';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
@@ -27,12 +31,7 @@ import { Sparkline } from '@/components/sparkline';
 import { SegmentedText } from '@/components/segmented-text';
 import { WatchDial } from '@/components/watch-dial';
 
-const euro = (value: number) =>
-  new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
+const euro = formatCurrency;
 
 const SORTS = ['value', 'recent'] as const;
 type Sort = (typeof SORTS)[number];
@@ -50,6 +49,7 @@ function WatchRow({
 }) {
   const deltaPct = valuation?.deltaPct ?? null;
   const deltaColor = deltaPct != null && deltaPct < 0 ? 'negative' : 'positive';
+  const locked = watch.locked === true;
 
   return (
     <Pressable
@@ -57,42 +57,62 @@ function WatchRow({
       style={({ pressed }) => [styles.row, !last && styles.rowBorder, pressed && styles.rowPressed]}
     >
       {watch.photoUrl ? (
-        <Image source={{ uri: watch.photoUrl }} style={styles.rowPhoto} contentFit="cover" />
+        <Image
+          source={{ uri: watch.photoUrl }}
+          style={[styles.rowPhoto, locked && styles.lockedDim]}
+          contentFit="cover"
+          blurRadius={locked ? 8 : 0}
+        />
       ) : (
-        <WatchDial size={44} />
+        <View style={locked ? styles.lockedDim : undefined}>
+          <WatchDial size={44} />
+        </View>
       )}
-      <View style={styles.rowText}>
+      <View style={[styles.rowText, locked && styles.lockedDim]}>
         <ThemedText type="smallBold" numberOfLines={1} style={styles.rowBrand}>
           {watch.brand}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
           {watch.model}
+          {watch.nickname ? ` “${watch.nickname}”` : ''}
         </ThemedText>
       </View>
-      {valuation && valuation.series.length > 1 ? (
+      {locked ? (
+        <SymbolView name="lock.fill" size={15} tintColor={Brand.inkTertiary} />
+      ) : valuation && valuation.series.length > 1 ? (
         <Sparkline values={valuation.series} width={40} height={20} />
       ) : (
         <View style={styles.sparkPlaceholder} />
       )}
       <View style={styles.rowRight}>
-        <ThemedText type="smallBold">
-          {valuation?.value != null ? euro(valuation.value) : '—'}
-        </ThemedText>
-        {deltaPct != null ? (
-          <ThemedText type="delta" themeColor={deltaColor}>
-            {deltaPct >= 0 ? '+' : '−'}
-            {Math.abs(deltaPct).toFixed(1)}%
+        {locked ? (
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            ••• ••€
           </ThemedText>
-        ) : null}
+        ) : (
+          <>
+            <ThemedText type="smallBold">
+              {valuation?.value != null ? euro(valuation.value) : '—'}
+            </ThemedText>
+            {deltaPct != null ? (
+              <ThemedText type="delta" themeColor={deltaColor}>
+                {deltaPct >= 0 ? '+' : '−'}
+                {Math.abs(deltaPct).toFixed(1)}%
+              </ThemedText>
+            ) : null}
+          </>
+        )}
       </View>
     </Pressable>
   );
 }
 
 export default function Collection() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { data: watches, isLoading, isError, refetch, isRefetching } = useWatches();
+  const deleteWatch = useDeleteWatch();
   const market = useCollectionMarket(watches);
   const [sort, setSort] = useState<Sort>('value');
   const { data: me } = useMe();
@@ -112,11 +132,40 @@ export default function Collection() {
 
   const deltaUp = (market.totalDeltaPct ?? 0) >= 0;
 
+  // Élément verrouillé (free au-delà du quota) : pas d'accès à la fiche —
+  // repasser Premium ou libérer un emplacement
+  function openLocked(watch: Watch) {
+    Alert.alert(t('collection.lockedTitle'), t('collection.lockedMessage'), [
+      { text: t('premiumGate.seePremium'), onPress: () => router.push('/paywall') },
+      {
+        text: t('collection.deleteEllipsis'),
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert(
+            t('collection.deleteConfirmTitle'),
+            t('collection.deleteConfirmMessage', { brand: watch.brand, model: watch.model }),
+            [
+              { text: t('common.cancel'), style: 'cancel' },
+              {
+                text: t('common.delete'),
+                style: 'destructive',
+                onPress: () =>
+                  deleteWatch.mutate(watch.id, {
+                    onError: (err) => Alert.alert(t('common.errorTitle'), apiErrorMessage(err)),
+                  }),
+              },
+            ]
+          ),
+      },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  }
+
   function Header() {
     return (
       <View>
         <View style={styles.titleRow}>
-          <ThemedText type="title">Collection</ThemedText>
+          <ThemedText type="title">{t('collection.title')}</ThemedText>
           <View style={styles.headerIcons}>
             <Pressable onPress={() => router.push('/(app)/community')} hitSlop={8} style={styles.profileButton}>
               <SymbolView name="bubble.left.and.bubble.right" size={23} tintColor={Brand.inkSecondary} />
@@ -137,24 +186,24 @@ export default function Collection() {
               <View style={styles.teaserTitleRow}>
                 <SymbolView name="lock.fill" size={13} tintColor={Brand.accent} />
                 <ThemedText type="small" themeColor="textSecondary">
-                  Tableau de bord patrimonial · {count}/{me!.watchLimit} montres
+                  {t('collection.teaserTitle', { used: me!.slotsUsed, limit: me!.slotsLimit })}
                 </ThemedText>
               </View>
               <ThemedText type="hero" style={styles.teaserValue}>
                 ••• ••• €
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                Valeur, plus-value et évolution de votre collection.
+                {t('collection.teaserSubtitle')}
               </ThemedText>
               <ThemedText type="smallBold" themeColor="interactive">
-                Débloquer avec Premium
+                {t('collection.teaserCta')}
               </ThemedText>
             </GlassCard>
           </Pressable>
         ) : (
           <GlassCard glow style={styles.totalCard}>
             <ThemedText type="small" themeColor="textSecondary">
-              Valeur totale · {count} {count === 1 ? 'montre' : 'montres'}
+              {t('collection.totalValue', { count })}
             </ThemedText>
             <View style={styles.totalRow}>
               <ThemedText type="hero">{euro(market.totalValue)}</ThemedText>
@@ -172,7 +221,7 @@ export default function Collection() {
             {totalGain != null ? (
               <ThemedText type="small" themeColor={totalGain >= 0 ? 'positive' : 'negative'}>
                 {totalGain >= 0 ? '+' : '−'}
-                {euro(Math.abs(totalGain))} depuis l'achat
+                {t('collection.sincePurchase', { amount: euro(Math.abs(totalGain)) })}
               </ThemedText>
             ) : null}
             {market.totalSeries.length > 1 ? (
@@ -196,7 +245,7 @@ export default function Collection() {
             options={SORTS}
             value={sort}
             onChange={setSort}
-            labels={{ value: 'Par valeur', recent: 'Récent' }}
+            labels={{ value: t('collection.sortByValue'), recent: t('collection.sortRecent') }}
           />
         </View>
       </View>
@@ -216,10 +265,10 @@ export default function Collection() {
         <View style={styles.emptyContainer}>
           <WatchDial size={64} />
           <ThemedText type="subtitle" style={styles.emptyTitle}>
-            Connexion impossible
+            {t('collection.errorTitle')}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.emptySubtitle}>
-            Votre collection est en sécurité,{'\n'}mais on n'arrive pas à la charger.
+            {t('collection.errorSubtitle')}
           </ThemedText>
           <Pressable style={styles.emptyButtonWrap} onPress={() => refetch()}>
             <LinearGradient
@@ -229,7 +278,7 @@ export default function Collection() {
               style={styles.emptyButton}
             >
               <ThemedText type="link" style={styles.emptyButtonText}>
-                Réessayer
+                {t('common.retry')}
               </ThemedText>
             </LinearGradient>
           </Pressable>
@@ -240,10 +289,10 @@ export default function Collection() {
       <View style={styles.emptyContainer}>
         <WatchDial size={64} />
         <ThemedText type="subtitle" style={styles.emptyTitle}>
-          Collection vide
+          {t('collection.emptyTitle')}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.emptySubtitle}>
-          Photographiez votre première montre,{'\n'}on s'occupe de l'identifier.
+          {t('collection.emptySubtitle')}
         </ThemedText>
         <Pressable style={styles.emptyButtonWrap} onPress={() => router.push('/watch/add')}>
           <LinearGradient
@@ -253,7 +302,7 @@ export default function Collection() {
             style={styles.emptyButton}
           >
             <ThemedText type="link" style={styles.emptyButtonText}>
-              Ajouter une montre
+              {t('collection.addWatch')}
             </ThemedText>
           </LinearGradient>
         </Pressable>
@@ -271,7 +320,7 @@ export default function Collection() {
           <WatchRow
             watch={item}
             valuation={market.byWatchId[item.id]}
-            onPress={() => router.push(`/watch/${item.id}`)}
+            onPress={() => (item.locked ? openLocked(item) : router.push(`/watch/${item.id}`))}
             last={index === sorted.length - 1}
           />
         )}
@@ -368,6 +417,9 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     opacity: 0.6,
+  },
+  lockedDim: {
+    opacity: 0.45,
   },
   rowPhoto: {
     width: 44,
