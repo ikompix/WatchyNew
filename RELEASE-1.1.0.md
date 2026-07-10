@@ -1,12 +1,24 @@
 # Release 1.1.0 — checklist et textes à coller
 
-Build 6 (1.1.0) soumis via EAS avec auto-submit TestFlight le 2026-07-10.
+**Build 7** (1.1.0) soumis via EAS avec auto-submit TestFlight le 2026-07-10 —
+il remplace le build 6 (il ajoute les notifications push opt-in + page BO).
 Ce fichier regroupe tout ce qui se fait à la main dans les dashboards.
+
+## 0. Test push de bout en bout (avant Submit for Review)
+
+1. Installer le **build 7** via TestFlight sur iPhone réel, se connecter, activer
+   les notifications (onboarding ou Profil → Notifications).
+2. `https://api.watchy-app.com/admin` (jeton maître) → **Notifications** →
+   segment **Test** + ton e-mail → envoyer → la notification doit arriver sur
+   l'iPhone. Ça valide la Push Key APNs (`X5CQD45H6V`, héritée de mai 2025 —
+   si rien n'arrive, elle a peut-être été révoquée : `eas credentials` → iOS →
+   production → Push Notifications → Set up, puis rebuild inutile, la clé est
+   côté serveur Expo).
 
 ## 1. App Store Connect — version 1.1.0
 
 1. Ma page d'app → « + » → nouvelle version **1.1.0**.
-2. Sélectionner le **build 6** (attendre la fin du processing TestFlight).
+2. Sélectionner le **build 7** (attendre la fin du processing TestFlight).
 3. Notes de version :
    - **FR** :
      > Watchy parle désormais anglais ! L'app s'adapte à la langue de votre appareil (français ou anglais), avec un sélecteur manuel dans le profil. Corrections et améliorations diverses, dont un correctif de l'ajout de montre.
