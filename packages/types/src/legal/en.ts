@@ -223,7 +223,7 @@ The Application may request the following permissions:
 
 - Camera: to take a photo of a watch to add or analyze.
 - Photo library: to select an existing photo.
-- Notifications: to send you alerts related to your wishlist or your subscription.
+- Notifications: to send you announcements about the Application (new features, important information).
 
 These permissions are optional. You can accept, refuse or change them at any time in your device settings.
 

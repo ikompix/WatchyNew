@@ -91,7 +91,7 @@ export default function Privacy() {
       <View style={styles.actions}>
         <PrimaryButton
           label={t('onboarding.privacyCta')}
-          onPress={() => router.push('/(onboarding)/premium')}
+          onPress={() => router.push('/(onboarding)/notifications')}
         />
         <View style={styles.legalRow}>
           <Pressable onPress={() => legalLink('privacy')} hitSlop={8}>

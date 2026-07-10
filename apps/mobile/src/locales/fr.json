@@ -164,6 +164,14 @@
     "optInSubtitle": "Statistiques d'usage anonymes",
     "privacyCta": "J'ai compris"
   },
+  "onboardingNotifications": {
+    "title": "Restez au courant des nouveautés",
+    "subtitle": "Recevez de temps en temps les annonces importantes : nouvelles fonctionnalités, améliorations. Rien d'autre — désactivable à tout moment dans les Réglages.",
+    "exampleTitle": "Watchy",
+    "exampleBody": "Nouveau : votre collection parle anglais 🇬🇧",
+    "enable": "Activer les notifications",
+    "later": "Plus tard"
+  },
   "watchDetail": {
     "edit": "Modifier",
     "purchaseDate": "Date d'achat",
@@ -275,6 +283,9 @@
     "language": "Langue",
     "languageTitle": "Langue de l'application",
     "languageAuto": "Automatique (appareil)",
+    "notifications": "Notifications",
+    "notificationsOn": "Activées",
+    "notificationsOff": "Désactivées — touchez pour activer",
     "signOut": "Se déconnecter",
     "deleteAccountTitle": "Supprimer mon compte",
     "deleteAccountSubtitle": "Efface définitivement toutes vos données",

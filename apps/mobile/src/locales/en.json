@@ -164,6 +164,14 @@
     "optInSubtitle": "Anonymous usage statistics",
     "privacyCta": "Got it"
   },
+  "onboardingNotifications": {
+    "title": "Stay in the loop",
+    "subtitle": "Get the occasional announcement that matters: new features, improvements. Nothing else — you can turn it off anytime in Settings.",
+    "exampleTitle": "Watchy",
+    "exampleBody": "New: track your collection in English 🇬🇧",
+    "enable": "Enable notifications",
+    "later": "Later"
+  },
   "watchDetail": {
     "edit": "Edit",
     "purchaseDate": "Purchase date",
@@ -275,6 +283,9 @@
     "language": "Language",
     "languageTitle": "App language",
     "languageAuto": "Automatic (device)",
+    "notifications": "Notifications",
+    "notificationsOn": "Enabled",
+    "notificationsOff": "Disabled — tap to enable",
     "signOut": "Sign out",
     "deleteAccountTitle": "Delete my account",
     "deleteAccountSubtitle": "Permanently erases all your data",

@@ -167,6 +167,17 @@ export const pushTokens = pgTable('push_tokens', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Campagnes push envoyées depuis le back office — l'envoi est exclusivement
+// manuel (POST /admin/push, jeton maître) : rien dans le code ne pousse seul
+export const pushCampaigns = pgTable('push_campaigns', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  title: text('title').notNull(),
+  body: text('body').notNull(),
+  segment: text('segment').notNull(), // 'all' | 'premium' | 'free' | 'test'
+  recipients: integer('recipients').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type WatchModelInsert = typeof watchModels.$inferInsert;
 export type WatchModelSelect = typeof watchModels.$inferSelect;
 export type WatchInsert = typeof watches.$inferInsert;

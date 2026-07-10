@@ -2,6 +2,16 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { apiPost } from './api-client';
 
+// Bannière affichée même app au premier plan (sinon iOS avale la notification)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
+
 let registered = false;
 
 /**
@@ -24,5 +34,17 @@ export async function registerPushToken(): Promise<void> {
     registered = true;
   } catch {
     // Environnement sans push (Expo Go, simulateur, pas de projet EAS)
+  }
+}
+
+/** Prompt système puis enregistrement du jeton. Retourne true si accordé. */
+export async function enablePushNotifications(): Promise<boolean> {
+  try {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') return false;
+    await registerPushToken();
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import Constants from 'expo-constants';
+import * as Notifications from 'expo-notifications';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import { isGuestEmail } from '@/lib/onboarding';
+import { enablePushNotifications } from '@/lib/push';
 import { presentCustomerCenter, restorePurchases } from '@/lib/purchases';
 import { apiDelete, unwrap } from '@/lib/api-client';
 import { apiErrorMessage } from '@/lib/premium-gate';
@@ -67,6 +69,31 @@ export default function Profile() {
       { text: 'English', onPress: pick('en') },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
+  }
+
+  // Notifications : reflète la permission système, re-vérifiée au retour des
+  // Réglages (AppState) — l'activation réelle passe par le prompt iOS
+  const [notifStatus, setNotifStatus] = useState<Notifications.PermissionStatus | null>(null);
+  useEffect(() => {
+    const check = () => Notifications.getPermissionsAsync().then((p) => setNotifStatus(p.status));
+    check();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') check();
+    });
+    return () => sub.remove();
+  }, []);
+
+  async function handleNotifications() {
+    if (notifStatus === 'granted') return;
+    if (notifStatus === 'denied') {
+      // Le prompt système ne peut plus être ré-affiché : direction Réglages
+      Linking.openSettings();
+      return;
+    }
+    const ok = await enablePushNotifications();
+    setNotifStatus(
+      ok ? Notifications.PermissionStatus.GRANTED : Notifications.PermissionStatus.DENIED
+    );
   }
 
   async function handleSubscription() {
@@ -184,6 +211,25 @@ export default function Profile() {
               </ThemedText>
             </View>
             <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
+          </Pressable>
+          <View style={styles.rowDivider} />
+          <Pressable style={styles.row} onPress={handleNotifications}>
+            <View style={styles.rowIcon}>
+              <SymbolView name="bell.badge" size={16} tintColor={Brand.accent} />
+            </View>
+            <View style={styles.rowText}>
+              <ThemedText type="smallBold">{t('profile.notifications')}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {notifStatus == null
+                  ? '…'
+                  : notifStatus === 'granted'
+                    ? t('profile.notificationsOn')
+                    : t('profile.notificationsOff')}
+              </ThemedText>
+            </View>
+            {notifStatus !== 'granted' && (
+              <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
+            )}
           </Pressable>
         </GlassCard>
 

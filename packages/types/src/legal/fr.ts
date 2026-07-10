@@ -222,7 +222,7 @@ L'Application peut demander les autorisations suivantes :
 
 - Appareil photo : afin de prendre une photo d'une montre à ajouter ou analyser.
 - Galerie de photos : afin de sélectionner une photo existante.
-- Notifications : afin de vous envoyer des alertes liées à votre liste de souhaits ou à votre abonnement.
+- Notifications : afin de vous envoyer des annonces concernant l'Application (nouveautés, informations importantes).
 
 Ces autorisations sont facultatives. Vous pouvez les accepter, les refuser ou les modifier à tout moment dans les réglages de votre appareil.
 

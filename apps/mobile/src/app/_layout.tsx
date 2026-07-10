@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { getOnboarded } from '@/lib/onboarding';
 import { loadLocaleOverride } from '@/lib/i18n';
 import { initPurchasesListener } from '@/lib/purchases';
+import { registerPushToken } from '@/lib/push';
 import { Brand } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +39,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    // Ré-enregistrement silencieux du jeton push (no-op sans permission) :
+    // couvre la rotation de jeton et les utilisateurs ayant déjà accepté
+    if (session) registerPushToken();
+  }, [session]);
 
   useEffect(() => {
     if (session === undefined || onboarded === undefined) return;

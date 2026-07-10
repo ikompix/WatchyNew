@@ -85,6 +85,13 @@
       "when": 1783709009045,
       "tag": "0011_watch_nickname",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783716446679,
+      "tag": "0012_tired_rattler",
+      "breakpoints": true
     }
   ]
 }

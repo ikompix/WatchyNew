@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
 import { eq } from 'drizzle-orm';
 import { db } from '../src/db/index.js';
-import { acquisitionSources, adminTokens, aiUsage, entitlements, profiles } from '../src/db/schema.js';
+import { acquisitionSources, adminTokens, aiUsage, entitlements, profiles, pushCampaigns, pushTokens } from '../src/db/schema.js';
 
 const rt = { realtime: { transport: ws as unknown as typeof WebSocket } };
 const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, rt);
@@ -153,6 +153,43 @@ try {
   })).json()).data;
   expect(me.plan === 'free', `revoke maître → /me free (reçu ${me.plan})`);
 
+  // 7bis. Notifications push : page maître seul, envoi test loggé, jeton
+  // invalide filtré (rien ne part vers Expo), aucune campagne côté équipe
+  html = await (await fetch(`${API}/admin/push`, { headers })).text();
+  expect(html.includes('Envoyer une notification'), 'GET /admin/push (maître) → formulaire');
+  html = await (await fetch(`${API}/admin/push`, { headers: { Cookie: teamCookie } })).text();
+  expect(html.includes('Réservé au jeton maître'), 'jeton équipe → /admin/push refusé');
+  res = await fetch(`${API}/admin/push`, {
+    method: 'POST',
+    headers: { Cookie: teamCookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'title=x&body=y&segment=all',
+  });
+  expect(res.status === 403, 'jeton équipe → POST /admin/push refusé (403)');
+  // Jeton volontairement non-Expo : stocké, mais filtré à l'envoi → 0 envoyé
+  res = await fetch(`${API}/me/push-token`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${s!.session!.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: 'pt-admin-test-fake' }),
+  });
+  expect(res.status === 200, `POST /me/push-token → 200 (reçu ${res.status})`);
+  res = await fetch(`${API}/admin/push`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `title=Test+admin&body=Message+de+test&segment=test&email=${encodeURIComponent(email)}`,
+    redirect: 'manual',
+  });
+  expect(res.status === 302 && (res.headers.get('location') ?? '').includes('sent=0'),
+    `envoi segment test (jeton non-Expo) → 0 envoyé (reçu ${res.headers.get('location')})`);
+  html = await (await fetch(`${API}/admin/push`, { headers })).text();
+  expect(html.includes('Test admin'), 'la campagne apparaît dans l\'historique');
+  res = await fetch(`${API}/admin/push`, {
+    method: 'POST',
+    headers: { Cookie: cookie, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'title=Sans+mail&body=x&segment=test&email=',
+    redirect: 'manual',
+  });
+  expect((res.headers.get('location') ?? '').includes('error='), 'segment test sans e-mail → erreur');
+
   // 8. Révocation du jeton d'équipe → login refusé
   const revokeId = (await db.select().from(adminTokens)).find((t) => t.label === 'Collegue Test')?.id;
   await fetch(`${API}/admin/team/revoke`, {
@@ -168,6 +205,8 @@ try {
   });
   expect(res.status === 401, 'jeton révoqué → login 401');
 } finally {
+  await db.delete(pushTokens).where(eq(pushTokens.userId, userId));
+  await db.delete(pushCampaigns).where(eq(pushCampaigns.title, 'Test admin'));
   await db.delete(adminTokens).where(eq(adminTokens.label, 'Collegue Test'));
   if (fakeUsageId) await db.delete(aiUsage).where(eq(aiUsage.id, fakeUsageId));
   await db.delete(acquisitionSources).where(eq(acquisitionSources.userId, userId));

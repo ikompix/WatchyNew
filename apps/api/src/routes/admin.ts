@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
-import { and, count, desc, eq, isNull, sql as dsql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, notInArray, or, sql as dsql } from 'drizzle-orm';
 import { gte } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import {
@@ -11,11 +11,14 @@ import {
   aiUsage,
   entitlements,
   profiles,
+  pushCampaigns,
+  pushTokens,
   recognitionEvents,
   watches,
   wishlistItems,
 } from '../db/schema.js';
 import { supabaseAdmin } from '../lib/supabase.js';
+import { sendExpoPush } from '../lib/push.js';
 
 // Back office : pages HTML server-rendered, protégées par ADMIN_TOKEN (cookie
 // httpOnly posé via le mini formulaire de connexion). Zéro dépendance front.
@@ -430,6 +433,143 @@ router.post('/team/revoke', async (c) => {
   return c.redirect('/admin/team');
 });
 
+// --- Notifications push (jeton maître uniquement) ------------------------------
+// Envoi exclusivement manuel : campagnes/annonces composées ici — aucun autre
+// endroit du code n'appelle sendExpoPush.
+
+const PUSH_SEGMENTS = ['all', 'premium', 'free', 'test'] as const;
+type PushSegment = (typeof PUSH_SEGMENTS)[number];
+const SEGMENT_LABELS: Record<PushSegment, string> = {
+  all: 'Tous',
+  premium: 'Premium',
+  free: 'Free',
+  test: 'Test (e-mail)',
+};
+
+const esc = (v: string) =>
+  v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** Utilisateurs premium actifs (même définition que la page Revenus). */
+async function premiumUserIds(): Promise<string[]> {
+  const rows = await db
+    .select({ userId: entitlements.userId })
+    .from(entitlements)
+    .where(
+      and(
+        eq(entitlements.plan, 'premium'),
+        or(isNull(entitlements.expiresAt), gt(entitlements.expiresAt, new Date()))
+      )
+    );
+  return rows.map((r) => r.userId);
+}
+
+/** Jetons ciblés par segment ; test = les appareils d'un seul compte (e-mail). */
+async function tokensForSegment(segment: PushSegment, email: string): Promise<string[]> {
+  if (segment === 'test') {
+    const wanted = email.trim().toLowerCase();
+    if (!wanted) return [];
+    const user = (await listAllUsers()).find((u) => u.email?.toLowerCase() === wanted);
+    if (!user) return [];
+    const rows = await db
+      .select({ token: pushTokens.token })
+      .from(pushTokens)
+      .where(eq(pushTokens.userId, user.id));
+    return rows.map((r) => r.token);
+  }
+  if (segment === 'premium' || segment === 'free') {
+    const premium = await premiumUserIds();
+    if (segment === 'premium' && !premium.length) return [];
+    const rows = await db
+      .select({ token: pushTokens.token })
+      .from(pushTokens)
+      .where(
+        segment === 'premium'
+          ? inArray(pushTokens.userId, premium)
+          : premium.length
+            ? notInArray(pushTokens.userId, premium)
+            : undefined
+      );
+    return rows.map((r) => r.token);
+  }
+  const rows = await db.select({ token: pushTokens.token }).from(pushTokens);
+  return rows.map((r) => r.token);
+}
+
+router.get('/push', async (c) => {
+  if (!isMaster(c)) {
+    return c.html(layout('push', `<section><p class="muted">Réservé au jeton maître.</p></section>`));
+  }
+  const sent = c.req.query('sent');
+  const purged = Number(c.req.query('purged') ?? 0);
+  const error = c.req.query('error');
+
+  const [[allCount], premium, campaigns] = await Promise.all([
+    db.select({ n: count() }).from(pushTokens),
+    premiumUserIds(),
+    db.select().from(pushCampaigns).orderBy(desc(pushCampaigns.createdAt)).limit(20),
+  ]);
+  const [premCount] = premium.length
+    ? await db.select({ n: count() }).from(pushTokens).where(inArray(pushTokens.userId, premium))
+    : [{ n: 0 }];
+
+  const history = campaigns
+    .map(
+      (p) => `<tr><td>${p.createdAt.toISOString().slice(0, 16).replace('T', ' ')}</td>
+      <td>${SEGMENT_LABELS[p.segment as PushSegment] ?? esc(p.segment)}</td>
+      <td>${esc(p.title)}</td><td>${esc(p.body)}</td><td>${p.recipients}</td></tr>`
+    )
+    .join('');
+
+  return c.html(
+    layout(
+      'push',
+      `${error ? `<div class="alert">${esc(error)}</div>` : ''}
+      ${sent != null ? `<div class="alert ok">Notification envoyée à ${sent} appareil(s)${purged ? ` · ${purged} jeton(s) expiré(s) purgé(s)` : ''}.</div>` : ''}
+      ${kpis([
+        ['Appareils inscrits', String(allCount.n), 'jetons push actifs'],
+        ['Premium', String(premCount.n), 'appareils'],
+        ['Free', String(allCount.n - premCount.n), 'appareils'],
+      ])}
+      <section><h2>Envoyer une notification</h2>
+      <p class="muted">Envoi immédiat et manuel — réfléchissez avant de cliquer, il n'y a pas d'annulation.
+      Commencez toujours par le segment « Test » vers votre propre compte.</p>
+      <form method="post" action="/admin/push" class="push-form"
+        onsubmit="return confirm('Envoyer « ' + this.title.value + ' » au segment ' + this.segment.options[this.segment.selectedIndex].text + ' ?')">
+      <input name="title" placeholder="Titre (ex. Nouveautés Watchy)" required maxlength="65"/>
+      <textarea name="body" placeholder="Message (visible en entier sur l'écran verrouillé — court et concret)" required maxlength="240" rows="3"></textarea>
+      <div class="push-row">
+        <select name="segment">${PUSH_SEGMENTS.map((s) => `<option value="${s}"${s === 'test' ? ' selected' : ''}>${SEGMENT_LABELS[s]}</option>`).join('')}</select>
+        <input name="email" type="email" placeholder="E-mail du compte test (segment Test uniquement)"/>
+      </div>
+      <button type="submit">Envoyer</button></form></section>
+      <section><h2>Dernières campagnes</h2>
+      ${campaigns.length ? `<table><tr><th>Date</th><th>Segment</th><th>Titre</th><th>Message</th><th>Envoyés</th></tr>${history}</table>` : '<p class="muted">Aucune campagne pour l\'instant.</p>'}</section>`
+    )
+  );
+});
+
+router.post('/push', async (c) => {
+  if (!isMaster(c)) return c.text('Réservé au jeton maître', 403);
+  const body = await c.req.parseBody();
+  const title = String(body.title ?? '').trim().slice(0, 65);
+  const message = String(body.body ?? '').trim().slice(0, 240);
+  const segment = PUSH_SEGMENTS.includes(String(body.segment) as PushSegment)
+    ? (String(body.segment) as PushSegment)
+    : 'test';
+  const email = String(body.email ?? '');
+
+  if (!title || !message) return c.redirect('/admin/push?error=Titre et message requis.');
+  if (segment === 'test' && !email.trim())
+    return c.redirect('/admin/push?error=Le segment Test exige un e-mail.');
+
+  const tokens = await tokensForSegment(segment, email);
+  const { sent, invalid } = await sendExpoPush(tokens, title, message);
+  if (invalid.length) await db.delete(pushTokens).where(inArray(pushTokens.token, invalid));
+  await db.insert(pushCampaigns).values({ title, body: message, segment, recipients: sent });
+  console.log(`[admin] push « ${title} » segment=${segment} envoyés=${sent} purgés=${invalid.length}`);
+  return c.redirect(`/admin/push?sent=${sent}&purged=${invalid.length}`);
+});
+
 // --- Premium promo (jeton maître uniquement) ----------------------------------
 
 router.post('/users/premium', async (c) => {
@@ -474,6 +614,7 @@ const NAV: Array<[string, string, string]> = [
   ['revenue', '/admin/revenue', 'Revenus'],
   ['costs', '/admin/costs', 'Coûts & ROI'],
   ['users', '/admin/users', 'Utilisateurs'],
+  ['push', '/admin/push', 'Notifications'],
   ['team', '/admin/team', 'Équipe'],
 ];
 
@@ -539,6 +680,13 @@ td { padding: 7px 8px; border-bottom: 1px solid #f0f3f6; }
 .alert.ok code { font-size: 13px; font-weight: 700; }
 .inline-form { display: flex; gap: 8px; }
 .inline-form input { flex: 1; border: 1px solid #d7dee6; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.push-form { display: flex; flex-direction: column; gap: 8px; }
+.push-form input, .push-form textarea, .push-form select { border: 1px solid #d7dee6;
+  border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+.push-form textarea { resize: vertical; }
+.push-form button { align-self: flex-start; padding: 10px 18px; font-size: 14px; }
+.push-row { display: flex; gap: 8px; }
+.push-row input { flex: 1; }
 button { background: #5b7fa6; color: #fff; border: 0; border-radius: 8px; padding: 7px 12px;
   font-size: 12px; cursor: pointer; }
 button.danger { background: #a4453f; }
