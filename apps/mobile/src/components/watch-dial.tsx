@@ -17,7 +17,7 @@ export function WatchDial({ size = 44 }: WatchDialProps) {
   const minuteAngle = (60 * Math.PI) / 180;
   const hourLen = r * 0.42;
   const minuteLen = r * 0.62;
-  const hands = 'rgba(27,37,49,0.55)';
+  const hands = 'rgba(22,24,43,0.55)';
 
   return (
     <Svg width={size} height={size}>

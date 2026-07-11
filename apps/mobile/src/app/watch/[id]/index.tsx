@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(27,37,49,0.06)',
+    backgroundColor: 'rgba(22,24,43,0.06)',
     marginHorizontal: Spacing.three,
   },
   notesBlock: {

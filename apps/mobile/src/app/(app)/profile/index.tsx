@@ -19,6 +19,7 @@ import { useLocaleStore, useT, type LocaleOverride } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
+import { WatchyMark } from '@/components/watchy-mark';
 
 export default function Profile() {
   const t = useT();
@@ -294,9 +295,12 @@ export default function Profile() {
           </Pressable>
         </GlassCard>
 
-        <ThemedText type="small" themeColor="textSecondary" style={styles.version}>
-          Watchy {Constants.expoConfig?.version ?? ''}
-        </ThemedText>
+        <View style={styles.aboutFooter}>
+          <WatchyMark width={28} />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.version}>
+            watchy {Constants.expoConfig?.version ?? ''}
+          </ThemedText>
+        </View>
       </View>
     </View>
   );
@@ -329,7 +333,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: 'rgba(91,127,166,0.12)',
+    backgroundColor: 'rgba(76,111,255,0.10)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -339,11 +343,15 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: 1,
-    backgroundColor: 'rgba(27,37,49,0.07)',
+    backgroundColor: 'rgba(22,24,43,0.07)',
     marginHorizontal: Spacing.three,
+  },
+  aboutFooter: {
+    alignItems: 'center',
+    marginTop: Spacing.three,
+    gap: Spacing.one,
   },
   version: {
     textAlign: 'center',
-    marginTop: Spacing.three,
   },
 });

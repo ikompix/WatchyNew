@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(27,37,49,0.08)',
+    backgroundColor: 'rgba(22,24,43,0.08)',
     marginHorizontal: Spacing.three,
   },
   error: {

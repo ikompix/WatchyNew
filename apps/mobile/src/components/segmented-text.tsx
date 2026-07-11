@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
     color: Brand.inkTertiary,
   },
   labelDisabled: {
-    color: 'rgba(27,37,49,0.18)',
+    color: 'rgba(22,24,43,0.18)',
   },
 });

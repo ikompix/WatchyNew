@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   track: {
     height: 7,
     borderRadius: 4,
-    backgroundColor: 'rgba(27,37,49,0.09)',
+    backgroundColor: 'rgba(22,24,43,0.09)',
     overflow: 'hidden',
   },
   fill: {

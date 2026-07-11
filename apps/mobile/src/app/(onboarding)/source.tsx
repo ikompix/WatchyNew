@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Radii.field,
     borderWidth: 1,
-    borderColor: 'rgba(27,37,49,0.14)',
+    borderColor: 'rgba(22,24,43,0.14)',
     backgroundColor: 'rgba(255,255,255,0.7)',
   },
   chipOn: {

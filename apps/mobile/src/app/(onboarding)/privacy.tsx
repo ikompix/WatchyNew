@@ -81,7 +81,7 @@ export default function Privacy() {
           <Switch
             value={optIn}
             onValueChange={toggle}
-            trackColor={{ false: 'rgba(27,37,49,0.12)', true: Brand.accent }}
+            trackColor={{ false: 'rgba(22,24,43,0.12)', true: Brand.accent }}
             thumbColor="#ffffff"
           />
         </GlassCard>

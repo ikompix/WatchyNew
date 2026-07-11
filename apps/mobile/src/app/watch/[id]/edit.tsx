@@ -235,7 +235,7 @@ function WatchEditForm({ watch }: { watch: Watch }) {
             <Switch
               value={draft.hasPapers}
               onValueChange={(v) => set('hasPapers', v)}
-              trackColor={{ false: 'rgba(27,37,49,0.12)', true: Brand.accent }}
+              trackColor={{ false: 'rgba(22,24,43,0.12)', true: Brand.accent }}
               thumbColor="#ffffff"
             />
           </View>
@@ -248,7 +248,7 @@ function WatchEditForm({ watch }: { watch: Watch }) {
             <Switch
               value={draft.hasBox}
               onValueChange={(v) => set('hasBox', v)}
-              trackColor={{ false: 'rgba(27,37,49,0.12)', true: Brand.accent }}
+              trackColor={{ false: 'rgba(22,24,43,0.12)', true: Brand.accent }}
               thumbColor="#ffffff"
             />
           </View>
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(27,37,49,0.06)',
+    backgroundColor: 'rgba(22,24,43,0.06)',
     marginHorizontal: Spacing.three,
   },
   inputGroup: {
@@ -419,11 +419,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: Radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(27,37,49,0.14)',
+    borderColor: 'rgba(22,24,43,0.14)',
   },
   chipActive: {
     borderColor: Brand.accent,
-    backgroundColor: 'rgba(91,127,166,0.12)',
+    backgroundColor: 'rgba(76,111,255,0.10)',
   },
   chipText: {
     color: Brand.inkSecondary,

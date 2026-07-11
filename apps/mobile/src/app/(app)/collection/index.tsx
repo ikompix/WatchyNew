@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(27,37,49,0.06)',
+    borderBottomColor: 'rgba(22,24,43,0.06)',
   },
   rowPressed: {
     opacity: 0.6,

@@ -9,7 +9,7 @@ type ScreenBackgroundProps = {
 };
 
 /**
- * Fond clair du handoff : dégradé #eef1f5 → #e4e9f0 + glows accent très
+ * Fond clair du handoff : dégradé bgTop → bgBottom + glows accent très
  * diffus pour que le verre ait de la matière à capter.
  */
 export function ScreenBackground({ chamber }: ScreenBackgroundProps) {
@@ -36,7 +36,7 @@ export function ScreenBackground({ chamber }: ScreenBackgroundProps) {
       <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
         <Defs>
           <RadialGradient id="halo-accent" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={Brand.accent} stopOpacity={0.16} />
+            <Stop offset="0%" stopColor={Brand.accent} stopOpacity={0.09} />
             <Stop offset="100%" stopColor={Brand.accent} stopOpacity={0} />
           </RadialGradient>
         </Defs>

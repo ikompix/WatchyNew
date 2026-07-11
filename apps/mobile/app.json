@@ -24,8 +24,8 @@
     "android": {
       "package": "com.watchyapp.watchy",
       "adaptiveIcon": {
-        "backgroundColor": "#eef1f5",
-        "foregroundImage": "./assets/images/watchy-icon.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -55,10 +55,10 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#eef1f5",
+          "backgroundColor": "#F7F8FC",
           "android": {
-            "image": "./assets/images/watchy-icon.png",
-            "imageWidth": 96
+            "image": "./assets/images/watchy-mark.png",
+            "imageWidth": 120
           }
         }
       ],

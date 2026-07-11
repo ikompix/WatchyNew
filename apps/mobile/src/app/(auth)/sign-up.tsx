@@ -18,6 +18,7 @@ import { useT } from '@/lib/i18n';
 import { ScreenBackground } from '@/components/screen-background';
 import { ThemedText } from '@/components/themed-text';
 import { GlassCard } from '@/components/glass-card';
+import { WatchyMark } from '@/components/watchy-mark';
 
 export default function SignUp() {
   const t = useT();
@@ -49,7 +50,10 @@ export default function SignUp() {
     return (
       <View style={[styles.container, { paddingTop: insets.top + Spacing.six }]}>
         <ScreenBackground />
-        <ThemedText style={styles.wordmark}>Watchy</ThemedText>
+        <View style={styles.lockup}>
+          <WatchyMark width={64} />
+          <ThemedText style={styles.wordmark}>watchy</ThemedText>
+        </View>
         <GlassCard style={styles.successCard}>
           <ThemedText type="default" style={{ textAlign: 'center' }}>
             {t('auth.checkEmail')}
@@ -66,7 +70,10 @@ export default function SignUp() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inner}
       >
-        <ThemedText style={styles.wordmark}>Watchy</ThemedText>
+        <View style={styles.lockup}>
+          <WatchyMark width={64} />
+          <ThemedText style={styles.wordmark}>watchy</ThemedText>
+        </View>
         <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
           {t('auth.createAccountLink')}
         </ThemedText>
@@ -155,12 +162,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  lockup: {
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
   wordmark: {
-    fontFamily: Fonts?.bold ?? 'SpaceGrotesk_700Bold',
-    fontSize: 38,
-    lineHeight: 46,
+    fontFamily: Fonts?.medium ?? 'SpaceGrotesk_500Medium',
+    fontSize: 32,
+    lineHeight: 40,
     color: Brand.ink,
-    letterSpacing: -0.8,
+    letterSpacing: -0.6,
   },
   subtitle: {
     marginTop: Spacing.one,
@@ -186,7 +197,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(27,37,49,0.08)',
+    backgroundColor: 'rgba(22,24,43,0.08)',
     marginHorizontal: Spacing.three,
   },
   errorText: {

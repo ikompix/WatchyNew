@@ -77,16 +77,16 @@ function page(locale: LegalLocale, doc: string, title: string, text: string): st
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${escapeHtml(title)} — Watchy</title>
 <style>
-  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b2531;
-         background: #eef1f5; margin: 0; padding: 24px 16px; line-height: 1.55; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #16182B;
+         background: #F7F8FC; margin: 0; padding: 24px 16px; line-height: 1.55; }
   main { max-width: 720px; margin: 0 auto; background: #ffffff; border-radius: 16px;
-         padding: 32px 28px; box-shadow: 0 4px 24px rgba(27,37,49,0.08); }
+         padding: 32px 28px; box-shadow: 0 4px 24px rgba(22,24,43,0.08); }
   h1 { font-size: 26px; margin: 0 0 4px; }
   h2 { font-size: 17px; margin: 28px 0 8px; }
   p, li { font-size: 15px; color: #3c4654; }
   .updated { color: #7b8794; font-size: 13px; margin-bottom: 24px; }
   nav { margin-top: 32px; font-size: 13px; }
-  nav a { color: #5b7fa6; }
+  nav a { color: #4C6FFF; }
 </style>
 </head>
 <body>

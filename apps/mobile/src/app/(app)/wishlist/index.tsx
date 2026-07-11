@@ -280,8 +280,8 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: Radii.field,
     borderWidth: 1,
-    borderColor: 'rgba(91,127,166,0.35)',
-    backgroundColor: 'rgba(91,127,166,0.08)',
+    borderColor: 'rgba(76,111,255,0.30)',
+    backgroundColor: 'rgba(76,111,255,0.07)',
   },
   pendingPhoto: {
     textAlign: 'center',

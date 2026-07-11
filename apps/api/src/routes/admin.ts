@@ -124,7 +124,7 @@ function chart30(days: number[]): string {
   const bars = days
     .map((v, i) => {
       const h = Math.round((v / max) * 90);
-      return `<rect x="${(i * bw + 1).toFixed(1)}" y="${100 - h}" width="${(bw - 2).toFixed(1)}" height="${h}" rx="2" fill="#5b7fa6"/>`;
+      return `<rect x="${(i * bw + 1).toFixed(1)}" y="${100 - h}" width="${(bw - 2).toFixed(1)}" height="${h}" rx="2" fill="#4C6FFF"/>`;
     })
     .join('');
   return `<svg viewBox="0 0 ${w} 110" class="chart" preserveAspectRatio="none">${bars}
@@ -618,12 +618,15 @@ const NAV: Array<[string, string, string]> = [
   ['team', '/admin/team', 'Équipe'],
 ];
 
+// Marque du handoff v3 (cadrans empilés) — inline pour éviter tout asset statique.
+const MARK = `<svg class="mark" width="23" height="20" viewBox="0 0 72 64" aria-hidden="true"><circle cx="22" cy="32" r="15" fill="#B9C4FF"/><circle cx="36" cy="32" r="16.5" fill="#FFFFFF"/><circle cx="36" cy="32" r="15" fill="#6E7CFF"/><circle cx="50" cy="32" r="16.5" fill="#FFFFFF"/><circle cx="50" cy="32" r="15" fill="#4C6FFF"/><path d="M50 32 L50 23" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/><path d="M50 32 L57 34.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/></svg>`;
+
 function layout(active: string, body: string): string {
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta http-equiv="refresh" content="300"/>
 <title>Watchy — Back office</title><style>${CSS}</style></head><body>
-<header><span class="logo">WATCHY <em>admin</em></span>
+<header><span class="logo">${MARK}watchy <em>admin</em></span>
 <nav>${NAV.map(([k, href, label]) => `<a href="${href}" class="${k === active ? 'on' : ''}">${label}</a>`).join('')}</nav></header>
 <main>${body}</main>
 <footer>Actualisé ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })} · rafraîchissement auto 5 min</footer>
@@ -634,7 +637,7 @@ function loginPage(error = ''): string {
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Watchy — Back office</title><style>${CSS}</style></head><body class="login">
-<main class="login-card"><span class="logo">WATCHY <em>admin</em></span>
+<main class="login-card"><span class="logo">${MARK}watchy <em>admin</em></span>
 ${error ? `<div class="alert">${error}</div>` : ''}
 <form method="post" action="/admin/login">
 <input type="password" name="token" placeholder="Jeton d'administration" autofocus/>
@@ -645,29 +648,30 @@ const CSS = `
 :root { color-scheme: light; }
 * { box-sizing: border-box; }
 body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0;
-  background: #eef1f5; color: #1b2531; }
+  background: #F7F8FC; color: #16182B; }
 header { display: flex; align-items: center; gap: 24px; padding: 14px 20px;
-  background: #1b2531; color: #fff; flex-wrap: wrap; }
-.logo { font-weight: 700; letter-spacing: 3px; font-size: 14px; }
-.logo em { font-style: normal; color: #8fb0d1; font-weight: 400; letter-spacing: 1px; }
+  background: #16182B; color: #fff; flex-wrap: wrap; }
+.logo { font-weight: 500; letter-spacing: -0.2px; font-size: 16px;
+  display: inline-flex; align-items: center; gap: 8px; }
+.logo em { font-style: normal; color: #B9C4FF; font-weight: 400; letter-spacing: 1px; font-size: 13px; }
 nav { display: flex; gap: 4px; flex-wrap: wrap; }
 nav a { color: #c5d2e0; text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 8px; }
-nav a.on, nav a:hover { background: rgba(91,127,166,.35); color: #fff; }
+nav a.on, nav a:hover { background: rgba(76,111,255,.30); color: #fff; }
 main { max-width: 960px; margin: 0 auto; padding: 20px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
-.kpi { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 10px rgba(27,37,49,.06); }
+.kpi { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 10px rgba(22,24,43,.06); }
 .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #7180936; color: #718093; }
 .kpi-value { font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
 .kpi-hint { font-size: 12px; color: #718093; }
 section { background: #fff; border-radius: 14px; padding: 16px 18px; margin: 14px 0;
-  box-shadow: 0 2px 10px rgba(27,37,49,.06); }
+  box-shadow: 0 2px 10px rgba(22,24,43,.06); }
 h2 { font-size: 14px; margin: 0 0 12px; letter-spacing: .3px; }
 .chart { width: 100%; height: 110px; background: #f6f8fa; border-radius: 10px; }
 .chart-max { font-size: 9px; fill: #718093; }
 .bars { display: flex; flex-direction: column; gap: 8px; }
 .bar-row { display: grid; grid-template-columns: 160px 1fr 110px; gap: 10px; align-items: center; font-size: 13px; }
 .bar-track { background: #f0f3f6; border-radius: 6px; height: 14px; overflow: hidden; display: block; }
-.bar-fill { background: #5b7fa6; height: 100%; display: block; border-radius: 6px; }
+.bar-fill { background: #4C6FFF; height: 100%; display: block; border-radius: 6px; }
 .bar-value { color: #718093; font-size: 12px; text-align: right; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718093;
@@ -687,16 +691,16 @@ td { padding: 7px 8px; border-bottom: 1px solid #f0f3f6; }
 .push-form button { align-self: flex-start; padding: 10px 18px; font-size: 14px; }
 .push-row { display: flex; gap: 8px; }
 .push-row input { flex: 1; }
-button { background: #5b7fa6; color: #fff; border: 0; border-radius: 8px; padding: 7px 12px;
+button { background: #4C6FFF; color: #fff; border: 0; border-radius: 8px; padding: 7px 12px;
   font-size: 12px; cursor: pointer; }
 button.danger { background: #a4453f; }
 footer { text-align: center; color: #9aa4b0; font-size: 11px; padding: 20px; }
 body.login { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
 .login-card { background: #fff; border-radius: 18px; padding: 36px 32px; width: 340px; text-align: center;
-  box-shadow: 0 4px 24px rgba(27,37,49,.08); display: flex; flex-direction: column; gap: 16px; }
-.login-card .logo { color: #1b2531; }
+  box-shadow: 0 4px 24px rgba(22,24,43,.08); display: flex; flex-direction: column; gap: 16px; }
+.login-card .logo { color: #16182B; }
 .login-card input { border: 1px solid #d7dee6; border-radius: 10px; padding: 12px 14px; font-size: 15px; width: 100%; }
-.login-card button { background: #5b7fa6; color: #fff; border: 0; border-radius: 10px; padding: 12px; font-size: 15px; cursor: pointer; width: 100%; }
+.login-card button { background: #4C6FFF; color: #fff; border: 0; border-radius: 10px; padding: 12px; font-size: 15px; cursor: pointer; width: 100%; }
 `;
 
 export { router as adminRouter };

@@ -3,36 +3,40 @@ import '@/global.css';
 import { Platform } from 'react-native';
 
 /**
- * Direction claire « 1b » — design handoff P0.
- * Palette : fond gris-bleu pâle, texte encre, accent bleu acier.
+ * Direction claire minimaliste — design handoff v3 (logo cadrans empilés).
+ * Palette : fond quasi blanc teinté périwinkle, encre #16182B, accent #4C6FFF.
  */
 export const Brand = {
   // Fond écran (dégradé linéaire 178°)
-  bgTop: '#eef1f5',
-  bgBottom: '#e4e9f0',
+  bgTop: '#F7F8FC',
+  bgBottom: '#EEF1FB',
   // Fond « chambre » (capture, radial)
-  chamberInner: '#e9edf2',
-  chamberOuter: '#d3d9e1',
-  ink: '#1b2531',
-  inkSecondary: 'rgba(27,37,49,0.55)',
-  inkTertiary: 'rgba(27,37,49,0.40)',
-  accent: '#5b7fa6',
-  accentDark: '#4a6f97',
-  accentLight: '#6b8fb6',
-  positive: '#2e7a4f',
-  negative: '#b0692e',
+  chamberInner: '#F1F3FB',
+  chamberOuter: '#DEE3F5',
+  ink: '#16182B',
+  inkSecondary: 'rgba(22,24,43,0.55)',
+  inkTertiary: 'rgba(22,24,43,0.40)',
+  accent: '#4C6FFF',
+  accentDark: '#3B57E0',
+  accentLight: '#6E7CFF',
+  positive: '#1F9D63',
+  negative: '#E0653C',
+  // Cadrans du logo (avant / milieu / arrière)
+  logoFront: '#4C6FFF',
+  logoMid: '#6E7CFF',
+  logoBack: '#B9C4FF',
   // Cadran placeholder
-  dialLight: '#fbfcfd',
-  dialDark: '#c4ccd6',
-  dialBorder: 'rgba(120,140,165,0.4)',
+  dialLight: '#FCFCFF',
+  dialDark: '#C7D0F0',
+  dialBorder: 'rgba(110,124,255,0.35)',
 } as const;
 
 export const Colors = {
   light: {
     text: Brand.ink,
     background: Brand.bgTop,
-    backgroundElement: 'rgba(255,255,255,0.62)',
-    backgroundSelected: 'rgba(91,127,166,0.12)',
+    backgroundElement: 'rgba(255,255,255,0.72)',
+    backgroundSelected: 'rgba(76,111,255,0.10)',
     textSecondary: Brand.inkSecondary,
     accent: Brand.accent,
     interactive: Brand.accentDark,
@@ -44,8 +48,8 @@ export const Colors = {
   dark: {
     text: Brand.ink,
     background: Brand.bgTop,
-    backgroundElement: 'rgba(255,255,255,0.62)',
-    backgroundSelected: 'rgba(91,127,166,0.12)',
+    backgroundElement: 'rgba(255,255,255,0.72)',
+    backgroundSelected: 'rgba(76,111,255,0.10)',
     textSecondary: Brand.inkSecondary,
     accent: Brand.accent,
     interactive: Brand.accentDark,

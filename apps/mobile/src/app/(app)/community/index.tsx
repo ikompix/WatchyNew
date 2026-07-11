@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   badge: {
-    backgroundColor: 'rgba(91,127,166,0.14)',
+    backgroundColor: 'rgba(76,111,255,0.12)',
     borderRadius: Radii.pill,
     paddingHorizontal: 9,
     paddingVertical: 4,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 11,
-    backgroundColor: 'rgba(91,127,166,0.12)',
+    backgroundColor: 'rgba(76,111,255,0.10)',
     justifyContent: 'center',
     alignItems: 'center',
   },

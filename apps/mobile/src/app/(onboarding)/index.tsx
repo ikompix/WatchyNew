@@ -10,7 +10,7 @@ import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
 import { useT } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
 import { ScreenBackground } from '@/components/screen-background';
-import { WatchDial } from '@/components/watch-dial';
+import { WatchyMark } from '@/components/watchy-mark';
 
 type Provider = 'apple' | 'google' | 'guest';
 
@@ -56,10 +56,8 @@ export default function Welcome() {
 
       {/* Hero */}
       <View style={styles.hero}>
-        <WatchDial size={118} />
-        <ThemedText type="overline" style={styles.wordmark}>
-          Watchy
-        </ThemedText>
+        <WatchyMark width={150} />
+        <ThemedText style={styles.wordmark}>watchy</ThemedText>
         <ThemedText type="title" style={styles.tagline}>
           {t('onboarding.welcomeTagline')}
         </ThemedText>
@@ -154,9 +152,12 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   wordmark: {
-    marginTop: Spacing.three,
-    letterSpacing: 3,
-    color: Brand.accentDark,
+    marginTop: Spacing.two,
+    fontFamily: Fonts?.medium ?? 'SpaceGrotesk_500Medium',
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.5,
+    color: Brand.ink,
   },
   tagline: {
     textAlign: 'center',

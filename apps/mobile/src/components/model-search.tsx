@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   manualDivider: {
     height: 1,
-    backgroundColor: 'rgba(27,37,49,0.08)',
+    backgroundColor: 'rgba(22,24,43,0.08)',
     marginHorizontal: Spacing.three,
   },
   ctaWrap: {

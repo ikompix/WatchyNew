@@ -12,19 +12,20 @@ router.get('/confirmed', (c) => {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Adresse confirmée — Watchy</title>
 <style>
-  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b2531;
-         background: #eef1f5; margin: 0; min-height: 100vh; display: flex;
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #16182B;
+         background: #F7F8FC; margin: 0; min-height: 100vh; display: flex;
          align-items: center; justify-content: center; padding: 24px; }
   main { max-width: 420px; background: #ffffff; border-radius: 20px; padding: 40px 32px;
-         text-align: center; box-shadow: 0 4px 24px rgba(27,37,49,0.08); }
+         text-align: center; box-shadow: 0 4px 24px rgba(22,24,43,0.08); }
   .badge { width: 64px; height: 64px; border-radius: 32px; background: rgba(64,128,90,0.12);
            display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
            font-size: 30px; }
   h1 { font-size: 22px; margin: 0 0 10px; }
   p { font-size: 15px; color: #3c4654; line-height: 1.55; margin: 0 0 24px; }
-  a.open { display: inline-block; background: #5b7fa6; color: #ffffff; text-decoration: none;
+  a.open { display: inline-block; background: #4C6FFF; color: #ffffff; text-decoration: none;
            padding: 14px 30px; border-radius: 14px; font-size: 15px; }
-  .brand { margin-top: 24px; font-size: 11px; letter-spacing: 3px; color: #9aa4b0; }
+  .brand { margin-top: 24px; font-size: 12px; letter-spacing: 0.5px; color: #9aa4b0;
+           display: flex; align-items: center; justify-content: center; gap: 6px; }
   .error h1 { color: #a4453f; }
 </style>
 </head>
@@ -41,7 +42,7 @@ router.get('/confirmed', (c) => {
     <h1>Lien expiré ou invalide</h1>
     <p id="errmsg">Relancez l'inscription depuis l'application pour recevoir un nouveau lien.</p>
   </div>
-  <p class="brand">WATCHY · watchy-app.com</p>
+  <p class="brand"><svg width="21" height="18" viewBox="0 0 72 64" aria-hidden="true"><circle cx="22" cy="32" r="15" fill="#B9C4FF"/><circle cx="36" cy="32" r="16.5" fill="#FFFFFF"/><circle cx="36" cy="32" r="15" fill="#6E7CFF"/><circle cx="50" cy="32" r="16.5" fill="#FFFFFF"/><circle cx="50" cy="32" r="15" fill="#4C6FFF"/><path d="M50 32 L50 23" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/><path d="M50 32 L57 34.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/></svg>watchy · watchy-app.com</p>
 </main>
 <script>
   // Supabase renvoie les erreurs (lien expiré…) dans le fragment ou la query
