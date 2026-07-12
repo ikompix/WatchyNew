@@ -120,6 +120,13 @@
       "when": 1783818349271,
       "tag": "0016_minor_starhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783886679260,
+      "tag": "0017_solid_abomination",
+      "breakpoints": true
     }
   ]
 }

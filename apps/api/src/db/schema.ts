@@ -242,6 +242,34 @@ export const pushCampaigns = pgTable('push_campaigns', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Bans prononcés depuis le back office. Le ban GoTrue (banned_until) bloque
+// les nouvelles connexions mais laisse les JWT émis valides ~1 h — cette table,
+// vérifiée par le middleware auth, coupe aussi les sessions en cours.
+// Réversible (delete), les données de l'utilisateur sont conservées.
+export const bannedUsers = pgTable('banned_users', {
+  userId: uuid('user_id').primaryKey(),
+  reason: text('reason'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// File de posts marketing générés par IA (/admin/marketing) — publication
+// exclusivement manuelle : rédigé par Claude, relu/édité puis copié à la main
+export const marketingPosts = pgTable('marketing_posts', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  channel: text('channel').notNull(), // 'instagram' | 'twitter' | 'reddit'
+  locale: text('locale').notNull().default('fr'), // 'fr' | 'en'
+  topic: text('topic').notNull(),
+  // Reddit uniquement (titre du post)
+  title: text('title'),
+  content: text('content').notNull(),
+  status: text('status').notNull().default('draft'), // 'draft' | 'approved' | 'published' | 'rejected'
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  publishedAt: timestamp('published_at', { withTimezone: true }),
+  // Extension future : publication planifiée 1-clic (X/Reddit)
+  scheduledFor: timestamp('scheduled_for', { withTimezone: true }),
+});
+
 export type WatchModelInsert = typeof watchModels.$inferInsert;
 export type WatchModelSelect = typeof watchModels.$inferSelect;
 export type WatchInsert = typeof watches.$inferInsert;

@@ -1,15 +1,17 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { Hono } from 'hono';
-import type { Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
-import { and, count, desc, eq, gt, inArray, isNull, notInArray, or, sql as dsql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, notInArray, or, sql as dsql } from 'drizzle-orm';
 import { gte } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import {
   acquisitionSources,
   adminTokens,
   aiUsage,
+  bannedUsers,
+  consumablePurchases,
   entitlements,
+  priceAlerts,
   profiles,
   pushCampaigns,
   pushTokens,
@@ -19,33 +21,39 @@ import {
 } from '../db/schema.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { sendExpoPush } from '../lib/push.js';
+import { premiumUserIds } from '../lib/entitlements.js';
+import { invalidateBanCache } from '../lib/bans.js';
+import type { AuthUser } from './admin-shared.js';
+import {
+  COOKIE,
+  daysAgo,
+  esc,
+  isGuest,
+  isMaster,
+  isTest,
+  isValidToken,
+  kpis,
+  layout,
+  listAllUsers,
+  loginPage,
+  maskEmail,
+  sha256,
+} from './admin-shared.js';
+import { adminMarketingRouter } from './admin-marketing.js';
 
 // Back office : pages HTML server-rendered, protégées par ADMIN_TOKEN (cookie
 // httpOnly posé via le mini formulaire de connexion). Zéro dépendance front.
+// Les gabarits et helpers partagés vivent dans admin-shared.ts.
 
 const router = new Hono();
 
-const COOKIE = 'watchy_admin';
 const PRICE_MONTHLY = 4.99;
 const PRICE_ANNUAL = 39.99;
-
-const sha256 = (v: string) => createHash('sha256').update(v).digest('hex');
-
-// Jeton maître (env) = tous les droits ; jetons d'équipe (DB, hachés,
-// révocables) = lecture des dashboards uniquement
-const isMaster = (c: Context) =>
-  Boolean(process.env.ADMIN_TOKEN) && getCookie(c, COOKIE) === process.env.ADMIN_TOKEN;
-
-async function isValidToken(token: string | undefined): Promise<boolean> {
-  if (!token || !process.env.ADMIN_TOKEN) return false;
-  if (token === process.env.ADMIN_TOKEN) return true;
-  const [row] = await db
-    .select({ id: adminTokens.id })
-    .from(adminTokens)
-    .where(and(eq(adminTokens.tokenHash, sha256(token)), isNull(adminTokens.revokedAt)))
-    .limit(1);
-  return Boolean(row);
-}
+// Packs consommables (prix ASC bruts)
+const CONSUMABLE_PRICES: Record<string, number> = {
+  watchy_scans_5: 1.99,
+  watchy_slots_3: 2.99,
+};
 
 router.post('/login', async (c) => {
   const body = await c.req.parseBody();
@@ -70,34 +78,12 @@ router.use('*', async (c, next) => {
   return next();
 });
 
+// Onglet marketing (fichier séparé) — monté après le middleware d'auth,
+// il hérite donc de la protection par cookie
+router.route('/marketing', adminMarketingRouter);
+
 // --- Helpers d'agrégation ---------------------------------------------------
 
-interface AuthUser {
-  id: string;
-  email?: string;
-  created_at: string;
-  last_sign_in_at?: string;
-}
-
-async function listAllUsers(): Promise<AuthUser[]> {
-  const users: AuthUser[] = [];
-  for (let page = 1; page <= 20; page++) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 500 });
-    if (error) throw error;
-    users.push(...(data.users as AuthUser[]));
-    if (data.users.length < 500) break;
-  }
-  return users;
-}
-
-const isGuest = (u: AuthUser) => u.email?.endsWith('@guest.watchy') ?? false;
-const isTest = (u: AuthUser) => u.email?.endsWith('@watchy.test') ?? false;
-const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 3600 * 1000);
-const maskEmail = (email?: string) => {
-  if (!email) return '—';
-  const [local, domain] = email.split('@');
-  return `${local.slice(0, 2)}…@${domain}`;
-};
 const eur = (n: number) => `${n.toFixed(2).replace('.', ',')} €`;
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
@@ -240,9 +226,19 @@ router.get('/acquisition', async (c) => {
 
 router.get('/revenue', async (c) => {
   const now = new Date();
-  const [premiums, users] = await Promise.all([
+  const [premiums, users, packs30, packsAll] = await Promise.all([
     db.select().from(entitlements).where(eq(entitlements.plan, 'premium')),
     listAllUsers(),
+    db
+      .select({ productId: consumablePurchases.productId, n: count() })
+      .from(consumablePurchases)
+      .where(and(gt(consumablePurchases.quantity, 0), gte(consumablePurchases.createdAt, daysAgo(30))))
+      .groupBy(consumablePurchases.productId),
+    db
+      .select({ productId: consumablePurchases.productId, n: count() })
+      .from(consumablePurchases)
+      .where(gt(consumablePurchases.quantity, 0))
+      .groupBy(consumablePurchases.productId),
   ]);
   const active = premiums.filter((p) => !p.expiresAt || p.expiresAt > now);
   const annual = active.filter((p) => /annual|year/i.test(p.productId ?? '')).length;
@@ -250,6 +246,16 @@ router.get('/revenue', async (c) => {
   const mrr = monthly * PRICE_MONTHLY + (annual * PRICE_ANNUAL) / 12;
   const accounts = users.filter((u) => !isTest(u) && !isGuest(u));
   const conversion = accounts.length ? ((active.length / accounts.length) * 100).toFixed(1) : '0';
+
+  const packRevenue = (rows: { productId: string; n: number }[]) =>
+    rows.reduce((sum, r) => sum + (CONSUMABLE_PRICES[r.productId] ?? 0) * r.n, 0);
+  const packsSold30 = packs30.reduce((sum, r) => sum + r.n, 0);
+  const packRows = packsAll
+    .map(
+      (r) =>
+        `<tr><td>${esc(r.productId)}</td><td>${r.n}</td><td>${eur((CONSUMABLE_PRICES[r.productId] ?? 0) * r.n)}</td></tr>`
+    )
+    .join('');
 
   return c.html(
     layout(
@@ -259,7 +265,10 @@ router.get('/revenue', async (c) => {
         ['Conversion', `${conversion}%`, `${active.length} premium / ${accounts.length} comptes`],
         ['MRR estimé', eur(mrr), 'mensuel + annuel/12'],
         ['Revenu annualisé', eur(mrr * 12), 'ARR estimé'],
+        ['Packs vendus 30 j', String(packsSold30), 'scans + emplacements'],
+        ['Revenu packs 30 j', eur(packRevenue(packs30)), 'one-shot, hors MRR'],
       ])}
+      ${packsAll.length ? `<section><h2>Consommables (depuis le lancement)</h2><table><tr><th>Produit</th><th>Ventes</th><th>Revenu brut</th></tr>${packRows}</table></section>` : ''}
       <p class="muted">Montants bruts App Store — la commission Apple (15-30 %) n'est pas déduite.</p>`
     )
   );
@@ -337,6 +346,7 @@ router.get('/costs', async (c) => {
 });
 
 router.get('/users', async (c) => {
+  const q = (c.req.query('q') ?? '').trim().toLowerCase();
   const [users, plans, sources, watchCounts, costs] = await Promise.all([
     listAllUsers(),
     db.select().from(entitlements),
@@ -353,9 +363,11 @@ router.get('/users', async (c) => {
   const costBy = new Map(costs.filter((x) => x.userId).map((x) => [x.userId!, Number(x.total)]));
 
   const master = isMaster(c);
-  const rows = users
+  const matches = users
     .filter((u) => !isTest(u))
-    .sort((a, b) => (b.created_at > a.created_at ? 1 : -1))
+    .filter((u) => !q || u.email?.toLowerCase().includes(q) || u.id === q)
+    .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
+  const rows = matches
     .slice(0, 50)
     .map((u) => {
       const premium = planBy.get(u.id) === 'premium';
@@ -365,7 +377,7 @@ router.get('/users', async (c) => {
         : premium
           ? `<form method="post" action="/admin/users/premium" style="margin:0"><input type="hidden" name="userId" value="${u.id}"/><input type="hidden" name="action" value="revoke"/><button class="danger">Retirer</button></form>`
           : `<form method="post" action="/admin/users/premium" style="margin:0"><input type="hidden" name="userId" value="${u.id}"/><input type="hidden" name="action" value="grant"/><button>⭐ Premium</button></form>`;
-      return `<tr><td>${maskEmail(u.email)}</td><td>${u.created_at.slice(0, 10)}</td><td>${plan}</td>
+      return `<tr><td><a href="/admin/users/${u.id}">${master ? esc(u.email ?? '—') : maskEmail(u.email)}</a></td><td>${u.created_at.slice(0, 10)}</td><td>${plan}</td>
         <td>${srcBy.get(u.id) ?? '—'}</td><td>${watchBy.get(u.id) ?? 0}</td>
         <td>${costBy.has(u.id) ? usd(costBy.get(u.id)!) : '—'}</td><td>${action}</td></tr>`;
     })
@@ -374,11 +386,144 @@ router.get('/users', async (c) => {
   return c.html(
     layout(
       'users',
-      `<section><h2>50 derniers inscrits</h2>
-      ${master ? '<p class="muted">« ⭐ Premium » accorde un accès promo (sans paiement, sans expiration) — pour vos testeurs. « Retirer » repasse en gratuit.</p>' : ''}
-      <table><tr><th>E-mail</th><th>Inscrit le</th><th>Plan</th><th>Source</th><th>Montres</th><th>Coût IA</th><th></th></tr>${rows}</table></section>`
+      `<section><h2>Rechercher un utilisateur</h2>
+      <form method="get" action="/admin/users" class="inline-form">
+      <input name="q" value="${esc(q)}" placeholder="E-mail (partiel) ou ID utilisateur"/>
+      <button type="submit">Rechercher</button></form></section>
+      <section><h2>${q ? `Résultats — ${matches.length}${matches.length > 50 ? ' (50 premiers affichés)' : ''}` : '50 derniers inscrits'}</h2>
+      ${master ? '<p class="muted">« ⭐ Premium » accorde un accès promo (sans paiement, sans expiration) — pour vos testeurs. « Retirer » repasse en gratuit. Cliquez sur un e-mail pour la fiche détaillée.</p>' : ''}
+      ${rows ? `<table><tr><th>E-mail</th><th>Inscrit le</th><th>Plan</th><th>Source</th><th>Montres</th><th>Coût IA</th><th></th></tr>${rows}</table>` : '<p class="muted">Aucun utilisateur trouvé.</p>'}</section>`
     )
   );
+});
+
+// --- Fiche utilisateur ---------------------------------------------------------
+
+const EXPERTISE_LABELS: Record<string, string> = {
+  novice: 'Novice',
+  passionne: 'Passionné',
+  collectionneur: 'Collectionneur',
+  metier: 'Métier',
+};
+
+router.get('/users/:id', async (c) => {
+  const id = c.req.param('id');
+  const errorMsg = c.req.query('error');
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+  if (error || !data.user) {
+    return c.html(
+      layout('users', `<section><p class="muted">Utilisateur introuvable.</p><p><a href="/admin/users">← Utilisateurs</a></p></section>`),
+      404
+    );
+  }
+  const u = data.user;
+
+  const [[ent], [profile], [src], [nbWatches], [nbWishlist], [nbScans], [ai], [ban]] =
+    await Promise.all([
+      db.select().from(entitlements).where(eq(entitlements.userId, id)).limit(1),
+      db.select().from(profiles).where(eq(profiles.userId, id)).limit(1),
+      db.select().from(acquisitionSources).where(eq(acquisitionSources.userId, id)).limit(1),
+      db.select({ n: count() }).from(watches).where(eq(watches.userId, id)),
+      db.select({ n: count() }).from(wishlistItems).where(eq(wishlistItems.userId, id)),
+      db.select({ n: count() }).from(recognitionEvents).where(eq(recognitionEvents.userId, id)),
+      db
+        .select({ total: dsql<string>`coalesce(sum(${aiUsage.costUsd}), 0)`, n: count() })
+        .from(aiUsage)
+        .where(eq(aiUsage.userId, id)),
+      db.select().from(bannedUsers).where(eq(bannedUsers.userId, id)).limit(1),
+    ]);
+
+  const master = isMaster(c);
+  const premium = ent?.plan === 'premium';
+  const plan = premium ? '⭐ premium' : isGuest(u as AuthUser) ? 'invité' : 'free';
+  const fmtDate = (v?: string | Date | null) =>
+    v ? new Date(v).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }) : '—';
+
+  const identity: Array<[string, string]> = [
+    ['E-mail', master ? esc(u.email ?? '—') : maskEmail(u.email ?? undefined)],
+    ['ID', u.id],
+    ['Inscrit le', fmtDate(u.created_at)],
+    ['Dernière connexion', fmtDate(u.last_sign_in_at)],
+    ['Plan', `${plan}${ent?.source ? ` · ${esc(ent.source)}` : ''}${ent?.productId ? ` · ${esc(ent.productId)}` : ''}`],
+    ['Expiration abonnement', ent?.expiresAt ? fmtDate(ent.expiresAt) : '—'],
+    ['Emplacements achetés', String(ent?.extraSlots ?? 0)],
+    ['Source d\'acquisition', src ? esc(src.source) : '—'],
+    ['Profil', profile
+      ? esc([profile.expertise ? (EXPERTISE_LABELS[profile.expertise] ?? profile.expertise) : null, profile.ageRange, profile.city, profile.country].filter(Boolean).join(' · ')) || '—'
+      : '—'],
+    ['Statut', ban
+      ? `🚫 banni le ${fmtDate(ban.createdAt)}${ban.reason ? ` — ${esc(ban.reason)}` : ''}`
+      : '✓ actif'],
+  ];
+
+  const actions = !master
+    ? ''
+    : `<section><h2>Actions</h2><div class="push-row">
+      ${premium
+        ? `<form method="post" action="/admin/users/premium" style="margin:0"><input type="hidden" name="userId" value="${u.id}"/><input type="hidden" name="action" value="revoke"/><input type="hidden" name="redirect" value="/admin/users/${u.id}"/><button class="danger">Retirer premium</button></form>`
+        : `<form method="post" action="/admin/users/premium" style="margin:0"><input type="hidden" name="userId" value="${u.id}"/><input type="hidden" name="action" value="grant"/><input type="hidden" name="redirect" value="/admin/users/${u.id}"/><button>⭐ Premium promo</button></form>`}
+      ${ban
+        ? `<form method="post" action="/admin/users/unban" style="margin:0"><input type="hidden" name="userId" value="${u.id}"/><button class="ghost">Débannir</button></form>`
+        : `<form method="post" action="/admin/users/ban" style="margin:0;display:flex;gap:8px;flex:1"
+            onsubmit="return confirm('Bannir ce compte ? Connexion et API bloquées immédiatement (réversible, données conservées).')">
+            <input type="hidden" name="userId" value="${u.id}"/>
+            <input name="reason" placeholder="Raison (facultatif)" maxlength="200" style="flex:1;border:1px solid #d7dee6;border-radius:10px;padding:8px 12px;font-size:13px"/>
+            <button class="danger">🚫 Bannir</button></form>`}
+      </div>
+      <p class="muted">Le ban bloque la connexion (Supabase) et coupe les sessions en cours (API). Les données sont conservées.</p></section>`;
+
+  return c.html(
+    layout(
+      'users',
+      `${errorMsg ? `<div class="alert">${esc(errorMsg)}</div>` : ''}
+      <p><a href="/admin/users">← Utilisateurs</a></p>
+      ${kpis([
+        ['Plan', plan, ban ? '🚫 banni' : ''],
+        ['Montres', String(nbWatches.n), 'en collection'],
+        ['Wishlist', String(nbWishlist.n), 'items'],
+        ['Scans', String(nbScans.n), 'reconnaissances IA'],
+        ['Coût IA', usd(Number(ai.total)), `${ai.n} appel(s)`],
+      ])}
+      <section><h2>Identité</h2>
+      <table>${identity.map(([k, v]) => `<tr><th style="width:220px">${k}</th><td>${v}</td></tr>`).join('')}</table></section>
+      ${actions}`
+    )
+  );
+});
+
+router.post('/users/ban', async (c) => {
+  if (!isMaster(c)) return c.text('Réservé au jeton maître', 403);
+  const body = await c.req.parseBody();
+  const userId = String(body.userId ?? '');
+  const reason = String(body.reason ?? '').trim().slice(0, 200) || null;
+  if (!userId) return c.redirect('/admin/users');
+  // GoTrue d'abord (bloque connexion + refresh) ; en cas d'échec on n'écrit
+  // rien en local pour ne pas créer d'état incohérent
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    ban_duration: '876600h', // ~100 ans
+  });
+  if (error) {
+    return c.redirect(`/admin/users/${userId}?error=${encodeURIComponent(`Ban Supabase impossible : ${error.message}`)}`);
+  }
+  await db.insert(bannedUsers).values({ userId, reason }).onConflictDoNothing();
+  invalidateBanCache();
+  console.log(`[admin] ban ${userId}${reason ? ` (${reason})` : ''}`);
+  return c.redirect(`/admin/users/${userId}`);
+});
+
+router.post('/users/unban', async (c) => {
+  if (!isMaster(c)) return c.text('Réservé au jeton maître', 403);
+  const body = await c.req.parseBody();
+  const userId = String(body.userId ?? '');
+  if (!userId) return c.redirect('/admin/users');
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: 'none' });
+  if (error) {
+    return c.redirect(`/admin/users/${userId}?error=${encodeURIComponent(`Débannissement Supabase impossible : ${error.message}`)}`);
+  }
+  await db.delete(bannedUsers).where(eq(bannedUsers.userId, userId));
+  invalidateBanCache();
+  console.log(`[admin] unban ${userId}`);
+  return c.redirect(`/admin/users/${userId}`);
 });
 
 // --- Équipe (jeton maître uniquement) -----------------------------------------
@@ -434,8 +579,9 @@ router.post('/team/revoke', async (c) => {
 });
 
 // --- Notifications push (jeton maître uniquement) ------------------------------
-// Envoi exclusivement manuel : campagnes/annonces composées ici — aucun autre
-// endroit du code n'appelle sendExpoPush.
+// Campagnes/annonces manuelles composées ici. Seule exception automatique dans
+// le code : les alertes de cote premium (lib/price-alerts.ts), greffées sur
+// les refreshs de cote déjà déclenchés.
 
 const PUSH_SEGMENTS = ['all', 'premium', 'free', 'test'] as const;
 type PushSegment = (typeof PUSH_SEGMENTS)[number];
@@ -445,23 +591,6 @@ const SEGMENT_LABELS: Record<PushSegment, string> = {
   free: 'Free',
   test: 'Test (e-mail)',
 };
-
-const esc = (v: string) =>
-  v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-/** Utilisateurs premium actifs (même définition que la page Revenus). */
-async function premiumUserIds(): Promise<string[]> {
-  const rows = await db
-    .select({ userId: entitlements.userId })
-    .from(entitlements)
-    .where(
-      and(
-        eq(entitlements.plan, 'premium'),
-        or(isNull(entitlements.expiresAt), gt(entitlements.expiresAt, new Date()))
-      )
-    );
-  return rows.map((r) => r.userId);
-}
 
 /** Jetons ciblés par segment ; test = les appareils d'un seul compte (e-mail). */
 async function tokensForSegment(segment: PushSegment, email: string): Promise<string[]> {
@@ -503,10 +632,11 @@ router.get('/push', async (c) => {
   const purged = Number(c.req.query('purged') ?? 0);
   const error = c.req.query('error');
 
-  const [[allCount], premium, campaigns] = await Promise.all([
+  const [[allCount], premium, campaigns, [alerts30]] = await Promise.all([
     db.select({ n: count() }).from(pushTokens),
     premiumUserIds(),
     db.select().from(pushCampaigns).orderBy(desc(pushCampaigns.createdAt)).limit(20),
+    db.select({ n: count() }).from(priceAlerts).where(gte(priceAlerts.createdAt, daysAgo(30))),
   ]);
   const [premCount] = premium.length
     ? await db.select({ n: count() }).from(pushTokens).where(inArray(pushTokens.userId, premium))
@@ -529,6 +659,7 @@ router.get('/push', async (c) => {
         ['Appareils inscrits', String(allCount.n), 'jetons push actifs'],
         ['Premium', String(premCount.n), 'appareils'],
         ['Free', String(allCount.n - premCount.n), 'appareils'],
+        ['Alertes de cote 30 j', String(alerts30.n), 'envois automatiques premium'],
       ])}
       <section><h2>Envoyer une notification</h2>
       <p class="muted">Envoi immédiat et manuel — réfléchissez avant de cliquer, il n'y a pas d'annulation.
@@ -577,6 +708,8 @@ router.post('/users/premium', async (c) => {
   const body = await c.req.parseBody();
   const userId = String(body.userId ?? '');
   const action = String(body.action ?? '');
+  // Retour vers la fiche détail quand l'action vient de là (chemin admin only)
+  const redirect = String(body.redirect ?? '').startsWith('/admin/') ? String(body.redirect) : '/admin/users';
   if (!userId) return c.redirect('/admin/users');
   if (action === 'grant') {
     await db
@@ -594,113 +727,7 @@ router.post('/users/premium', async (c) => {
       .where(eq(entitlements.userId, userId));
     console.log(`[admin] premium retiré à ${userId}`);
   }
-  return c.redirect('/admin/users');
+  return c.redirect(redirect);
 });
-
-// --- Gabarits ----------------------------------------------------------------
-
-function kpis(items: Array<[string, string, string]>): string {
-  return `<div class="kpis">${items
-    .map(
-      ([label, value, hint]) =>
-        `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div><div class="kpi-hint">${hint}</div></div>`
-    )
-    .join('')}</div>`;
-}
-
-const NAV: Array<[string, string, string]> = [
-  ['overview', '/admin', "Vue d'ensemble"],
-  ['acquisition', '/admin/acquisition', 'Acquisition'],
-  ['revenue', '/admin/revenue', 'Revenus'],
-  ['costs', '/admin/costs', 'Coûts & ROI'],
-  ['users', '/admin/users', 'Utilisateurs'],
-  ['push', '/admin/push', 'Notifications'],
-  ['team', '/admin/team', 'Équipe'],
-];
-
-// Marque du handoff v3 (cadrans empilés) — inline pour éviter tout asset statique.
-const MARK = `<svg class="mark" width="23" height="20" viewBox="0 0 72 64" aria-hidden="true"><circle cx="22" cy="32" r="15" fill="#B9C4FF"/><circle cx="36" cy="32" r="16.5" fill="#FFFFFF"/><circle cx="36" cy="32" r="15" fill="#6E7CFF"/><circle cx="50" cy="32" r="16.5" fill="#FFFFFF"/><circle cx="50" cy="32" r="15" fill="#4C6FFF"/><path d="M50 32 L50 23" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/><path d="M50 32 L57 34.5" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/></svg>`;
-
-function layout(active: string, body: string): string {
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<meta http-equiv="refresh" content="300"/>
-<title>Watchy — Back office</title><style>${CSS}</style></head><body>
-<header><span class="logo">${MARK}watchy <em>admin</em></span>
-<nav>${NAV.map(([k, href, label]) => `<a href="${href}" class="${k === active ? 'on' : ''}">${label}</a>`).join('')}</nav></header>
-<main>${body}</main>
-<footer>Actualisé ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })} · rafraîchissement auto 5 min</footer>
-</body></html>`;
-}
-
-function loginPage(error = ''): string {
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Watchy — Back office</title><style>${CSS}</style></head><body class="login">
-<main class="login-card"><span class="logo">${MARK}watchy <em>admin</em></span>
-${error ? `<div class="alert">${error}</div>` : ''}
-<form method="post" action="/admin/login">
-<input type="password" name="token" placeholder="Jeton d'administration" autofocus/>
-<button type="submit">Entrer</button></form></main></body></html>`;
-}
-
-const CSS = `
-:root { color-scheme: light; }
-* { box-sizing: border-box; }
-body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0;
-  background: #F7F8FC; color: #16182B; }
-header { display: flex; align-items: center; gap: 24px; padding: 14px 20px;
-  background: #16182B; color: #fff; flex-wrap: wrap; }
-.logo { font-weight: 500; letter-spacing: -0.2px; font-size: 16px;
-  display: inline-flex; align-items: center; gap: 8px; }
-.logo em { font-style: normal; color: #B9C4FF; font-weight: 400; letter-spacing: 1px; font-size: 13px; }
-nav { display: flex; gap: 4px; flex-wrap: wrap; }
-nav a { color: #c5d2e0; text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 8px; }
-nav a.on, nav a:hover { background: rgba(76,111,255,.30); color: #fff; }
-main { max-width: 960px; margin: 0 auto; padding: 20px; }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 14px 0; }
-.kpi { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 10px rgba(22,24,43,.06); }
-.kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #7180936; color: #718093; }
-.kpi-value { font-size: 26px; font-weight: 700; margin: 4px 0 2px; }
-.kpi-hint { font-size: 12px; color: #718093; }
-section { background: #fff; border-radius: 14px; padding: 16px 18px; margin: 14px 0;
-  box-shadow: 0 2px 10px rgba(22,24,43,.06); }
-h2 { font-size: 14px; margin: 0 0 12px; letter-spacing: .3px; }
-.chart { width: 100%; height: 110px; background: #f6f8fa; border-radius: 10px; }
-.chart-max { font-size: 9px; fill: #718093; }
-.bars { display: flex; flex-direction: column; gap: 8px; }
-.bar-row { display: grid; grid-template-columns: 160px 1fr 110px; gap: 10px; align-items: center; font-size: 13px; }
-.bar-track { background: #f0f3f6; border-radius: 6px; height: 14px; overflow: hidden; display: block; }
-.bar-fill { background: #4C6FFF; height: 100%; display: block; border-radius: 6px; }
-.bar-value { color: #718093; font-size: 12px; text-align: right; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718093;
-  padding: 6px 8px; border-bottom: 1px solid #e6eaf0; }
-td { padding: 7px 8px; border-bottom: 1px solid #f0f3f6; }
-.alert { background: #fdf0ef; color: #a4453f; border: 1px solid #f2d6d3; border-radius: 12px;
-  padding: 12px 16px; margin: 14px 0; font-size: 14px; }
-.muted { color: #718093; font-size: 12px; }
-.alert.ok { background: #eef7f0; color: #2f6a45; border-color: #cfe8d6; word-break: break-all; }
-.alert.ok code { font-size: 13px; font-weight: 700; }
-.inline-form { display: flex; gap: 8px; }
-.inline-form input { flex: 1; border: 1px solid #d7dee6; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
-.push-form { display: flex; flex-direction: column; gap: 8px; }
-.push-form input, .push-form textarea, .push-form select { border: 1px solid #d7dee6;
-  border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: inherit; }
-.push-form textarea { resize: vertical; }
-.push-form button { align-self: flex-start; padding: 10px 18px; font-size: 14px; }
-.push-row { display: flex; gap: 8px; }
-.push-row input { flex: 1; }
-button { background: #4C6FFF; color: #fff; border: 0; border-radius: 8px; padding: 7px 12px;
-  font-size: 12px; cursor: pointer; }
-button.danger { background: #a4453f; }
-footer { text-align: center; color: #9aa4b0; font-size: 11px; padding: 20px; }
-body.login { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.login-card { background: #fff; border-radius: 18px; padding: 36px 32px; width: 340px; text-align: center;
-  box-shadow: 0 4px 24px rgba(22,24,43,.08); display: flex; flex-direction: column; gap: 16px; }
-.login-card .logo { color: #16182B; }
-.login-card input { border: 1px solid #d7dee6; border-radius: 10px; padding: 12px 14px; font-size: 15px; width: 100%; }
-.login-card button { background: #4C6FFF; color: #fff; border: 0; border-radius: 10px; padding: 12px; font-size: 15px; cursor: pointer; width: 100%; }
-`;
 
 export { router as adminRouter };
