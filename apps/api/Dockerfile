@@ -22,4 +22,8 @@ ENV NODE_ENV=production
 # Prod par défaut : tsx sans watch (le package @watchy/types est consommé en
 # source TS), secrets via variables d'env du provider — pas de .env embarqué.
 # Le mode dev (tsx watch + volumes) est réactivé par docker-compose.
-CMD ["pnpm", "exec", "tsx", "src/index.ts"]
+# db:migrate d'abord : Railway auto-déploie chaque push GitHub, le schéma doit
+# suivre le code sans étape manuelle (échec de migration = démarrage bloqué,
+# c'est voulu — l'ancien déploiement reste en ligne). Les fichiers RLS
+# compagnons (apply-sql.mts) restent manuels : non idempotents.
+CMD ["sh", "-c", "pnpm run db:migrate && pnpm exec tsx src/index.ts"]
