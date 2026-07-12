@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { entitlements } from '../db/schema.js';
+import { consumablePurchases, entitlements, scanCredits } from '../db/schema.js';
 import type { ApiResponse } from '@watchy/types';
 
 // Monté SANS authMiddleware : RevenueCat s'authentifie par le header
@@ -12,17 +12,55 @@ const router = new Hono();
 // l'échéance — c'est l'event EXPIRATION qui repasse en free.
 const PREMIUM_EVENTS = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION', 'PRODUCT_CHANGE']);
 
+// Packs consommables (aucun entitlement RC associé) : crédités par le webhook,
+// jamais via entitlements.plan
+const CONSUMABLES: Record<string, { kind: 'scans' | 'slots'; qty: number }> = {
+  watchy_scans_5: { kind: 'scans', qty: 5 },
+  watchy_slots_3: { kind: 'slots', qty: 3 },
+};
+
 interface RevenueCatEvent {
+  // Id unique de l'event RC — clé d'idempotence (RC retente en cas de timeout)
+  id?: string;
   type?: string;
   app_user_id?: string;
   original_app_user_id?: string;
   product_id?: string;
+  cancel_reason?: string;
   expiration_at_ms?: number | null;
   transferred_from?: string[];
   transferred_to?: string[];
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Applique l'effet d'un consommable (appelé uniquement après insert idempotent réussi). */
+async function applyConsumable(
+  consumable: (typeof CONSUMABLES)[string],
+  userId: string,
+  quantity: number,
+  isRefund: boolean
+): Promise<void> {
+  if (consumable.kind === 'scans') {
+    await db
+      .insert(scanCredits)
+      .values({ userId, delta: quantity, reason: isRefund ? 'refund' : 'purchase' });
+  } else if (consumable.kind === 'slots') {
+    // Upsert sans toucher plan/expiresAt : un premium qui achète des slots ne
+    // perd pas son statut, et l'EXPIRATION d'un abonnement ne touche pas
+    // extraSlots — les emplacements achetés sont permanents
+    await db
+      .insert(entitlements)
+      .values({ userId, plan: 'free', extraSlots: Math.max(quantity, 0) })
+      .onConflictDoUpdate({
+        target: entitlements.userId,
+        set: {
+          extraSlots: sql`greatest(${entitlements.extraSlots} + ${quantity}, 0)`,
+          updatedAt: new Date(),
+        },
+      });
+  }
+}
 
 router.post('/revenuecat', async (c) => {
   const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
@@ -74,6 +112,35 @@ router.post('/revenuecat', async (c) => {
   if (!appUserId || !UUID_RE.test(appUserId)) {
     console.warn(`[revenuecat] event ${event.type} ignoré: app_user_id non reconnu`);
     return c.json<ApiResponse<{ ignored: true }>>({ data: { ignored: true }, error: null });
+  }
+
+  // Consommables : crédit à l'achat (NON_RENEWING_PURCHASE), débit au
+  // remboursement (CANCELLATION). L'insert idempotent dans consumable_purchases
+  // garantit qu'un retry RC ne crédite pas deux fois.
+  const consumable = event.product_id ? CONSUMABLES[event.product_id] : undefined;
+  if (consumable) {
+    if (event.type === 'NON_RENEWING_PURCHASE' || event.type === 'CANCELLATION') {
+      const isRefund = event.type === 'CANCELLATION';
+      const quantity = isRefund ? -consumable.qty : consumable.qty;
+      const rcEventId = event.id ?? `${event.type}:${appUserId}:${event.product_id}`;
+      const [inserted] = await db
+        .insert(consumablePurchases)
+        .values({ rcEventId, userId: appUserId, productId: event.product_id!, quantity })
+        .onConflictDoNothing({ target: consumablePurchases.rcEventId })
+        .returning();
+      if (inserted) {
+        await applyConsumable(consumable, appUserId, quantity, isRefund);
+        console.log(
+          `[revenuecat] ${appUserId} ${isRefund ? 'refund' : 'achat'} ${event.product_id} (${quantity > 0 ? '+' : ''}${quantity})`
+        );
+      } else {
+        console.log(`[revenuecat] event ${rcEventId} déjà traité — ignoré (retry RC)`);
+      }
+    } else {
+      // Type inattendu pour un consommable — à vérifier au premier achat Test Store
+      console.warn(`[revenuecat] event ${event.type} inattendu pour ${event.product_id} — ignoré`);
+    }
+    return c.json<ApiResponse<{ ok: true }>>({ data: { ok: true }, error: null });
   }
 
   if (PREMIUM_EVENTS.has(event.type)) {

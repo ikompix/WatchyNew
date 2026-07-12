@@ -77,6 +77,9 @@ export const entitlements = pgTable('entitlements', {
   productId: text('product_id'),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   rcAppUserId: text('rc_app_user_id'),
+  // Emplacements achetés à l'unité (pack watchy_slots_3) — permanents : ils
+  // survivent à l'expiration d'un abonnement, indépendants de `plan`
+  extraSlots: integer('extra_slots').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -164,7 +167,68 @@ export const featureInterest = pgTable(
 export const pushTokens = pgTable('push_tokens', {
   token: text('token').primaryKey(),
   userId: uuid('user_id').notNull(),
+  // Langue de l'appareil ('fr' | 'en') — les push automatiques (alertes de
+  // cote) n'ont pas de contexte requête pour lire Accept-Language
+  locale: text('locale').notNull().default('fr'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Achats consommables RevenueCat (packs de scans, emplacements) — une ligne
+// par event RC, rc_event_id unique = idempotence (RC retente les webhooks)
+export const consumablePurchases = pgTable('consumable_purchases', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  rcEventId: text('rc_event_id').notNull().unique(),
+  userId: uuid('user_id').notNull(),
+  productId: text('product_id').notNull(),
+  // Négatif = remboursement
+  quantity: integer('quantity').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Ledger de crédits de scans : +N à l'achat d'un pack, -1 par scan consommé,
+// -N au remboursement. Solde = sum(delta).
+export const scanCredits = pgTable('scan_credits', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid('user_id').notNull(),
+  delta: integer('delta').notNull(),
+  reason: text('reason').notNull(), // 'purchase' | 'scan' | 'refund'
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Préférences de notifications — absence de ligne = tout activé par défaut
+export const notificationPrefs = pgTable('notification_prefs', {
+  userId: uuid('user_id').primaryKey(),
+  priceAlerts: boolean('price_alerts').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Trace des alertes de cote envoyées (premium) — sert aussi d'anti-doublon :
+// pas de nouvelle alerte pour un modèle/variante alerté il y a moins de 7 j
+export const priceAlerts = pgTable('price_alerts', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  watchModelId: uuid('watch_model_id').notNull(),
+  // Non nul = alerte de variante (un seul destinataire, le propriétaire)
+  watchId: uuid('watch_id'),
+  oldPrice: numeric('old_price', { precision: 12, scale: 2 }).notNull(),
+  newPrice: numeric('new_price', { precision: 12, scale: 2 }).notNull(),
+  recipients: integer('recipients').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Coffre-fort documents (premium) : papiers/factures/certificats attachés à
+// une montre. `path` = chemin dans le bucket PRIVÉ watch-documents — jamais
+// d'URL persistée, les URLs signées expirent et sont générées à la lecture.
+export const watchDocuments = pgTable('watch_documents', {
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid('user_id').notNull(),
+  watchId: uuid('watch_id')
+    .notNull()
+    .references(() => watches.id, { onDelete: 'cascade' }),
+  path: text('path').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  label: text('label'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 // Campagnes push envoyées depuis le back office — l'envoi est exclusivement

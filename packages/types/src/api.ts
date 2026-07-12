@@ -93,6 +93,8 @@ export interface MeResult {
   slotsLimit: number | null;
   scansUsed: number;
   scansLimit: number | null;
+  /** Crédits de scans achetés en pack (consommés après le mensuel gratuit) */
+  scanCredits: number;
 }
 
 export interface PortfolioWatchValuation {
@@ -142,6 +144,28 @@ export interface AddWishlistItemDto {
   model?: string;
   reference?: string;
   photoUrl?: string;
+}
+
+/** Préférences de notifications — absence de ligne côté serveur = tout activé. */
+export interface NotificationPrefs {
+  priceAlerts: boolean;
+}
+
+/** Document du coffre-fort (premium) — l'URL est signée courte durée, à re-demander. */
+export interface WatchDocument {
+  id: string;
+  label: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: string;
+  /** URL signée (1 h) — jamais à persister côté client */
+  url: string;
+}
+
+export interface AddWatchDocumentDto {
+  imageBase64: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  label?: string;
 }
 
 export type ApiSuccess<T> = { data: T; error: null };

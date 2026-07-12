@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { apiPost } from './api-client';
+import { getActiveLocale } from './i18n';
 
 // Bannière affichée même app au premier plan (sinon iOS avale la notification)
 Notifications.setNotificationHandler({
@@ -30,7 +31,8 @@ export async function registerPushToken(): Promise<void> {
       projectId ? { projectId } : undefined
     );
     if (!token) return;
-    await apiPost('/me/push-token', { token });
+    // La locale sert aux push automatiques (alertes de cote) envoyés hors requête
+    await apiPost('/me/push-token', { token, locale: getActiveLocale() });
     registered = true;
   } catch {
     // Environnement sans push (Expo Go, simulateur, pas de projet EAS)

@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db/index.js';
 import { marketPrices, watches, watchModels } from '../db/schema.js';
 import { UsageTracker } from './ai-usage.js';
+import { maybeSendPriceAlert } from './price-alerts.js';
 
 // Libellés internes aux prompts (jamais affichés à l'utilisateur) — ils
 // restent en français quelle que soit la langue de l'app : la sortie du
@@ -220,6 +221,15 @@ export async function refreshWatchPrice(watchId: string): Promise<boolean> {
   );
   if (!research?.found || research.priceEur == null) return false;
 
+  // Dernière cote de variante connue, lue AVANT le delete/insert — sert de
+  // référence à l'alerte de variation (premium)
+  const [previous] = await db
+    .select({ price: marketPrices.price })
+    .from(marketPrices)
+    .where(eq(marketPrices.watchId, watchId))
+    .orderBy(desc(marketPrices.fetchedAt))
+    .limit(1);
+
   const source = `web:${research.sources.slice(0, 2).join(',') || 'recherche'}`.slice(0, 120);
   const rows: (typeof marketPrices.$inferInsert)[] = [];
   if (research.priceSixMonthsAgoEur != null) {
@@ -249,6 +259,13 @@ export async function refreshWatchPrice(watchId: string): Promise<boolean> {
   // Remplace l'ancienne cote de variante (les attributs ont pu changer)
   await db.delete(marketPrices).where(eq(marketPrices.watchId, watchId));
   await db.insert(marketPrices).values(rows);
+  // Alerte mono-destinataire (le propriétaire de la variante) — fire-and-forget
+  void maybeSendPriceAlert({
+    watchModelId: watch.watchModelId,
+    watchId,
+    previousPrice: previous ? Number(previous.price) : null,
+    newPrice: research.priceEur,
+  });
   return true;
 }
 
@@ -263,6 +280,22 @@ export async function refreshModelPrice(watchModelId: string): Promise<boolean> 
 
   const research = await researchMarketPrice(model);
   if (!research?.found || research.priceEur == null) return false;
+
+  // Dernière cote réelle du modèle (hors seed inventé et hors variantes), lue
+  // AVANT l'insert — le point courant l'emporte sur les points rétrodatés
+  // grâce au tri par fetchedAt
+  const [previous] = await db
+    .select({ price: marketPrices.price })
+    .from(marketPrices)
+    .where(
+      and(
+        eq(marketPrices.watchModelId, watchModelId),
+        isNull(marketPrices.watchId),
+        ne(marketPrices.source, 'seed')
+      )
+    )
+    .orderBy(desc(marketPrices.fetchedAt))
+    .limit(1);
 
   const source = `web:${research.sources.slice(0, 2).join(',') || 'recherche'}`.slice(0, 120);
   const rows: (typeof marketPrices.$inferInsert)[] = [];
@@ -292,5 +325,11 @@ export async function refreshModelPrice(watchModelId: string): Promise<boolean> 
   await db
     .delete(marketPrices)
     .where(and(eq(marketPrices.watchModelId, watchModelId), eq(marketPrices.source, 'seed')));
+  // Alerte tous les possesseurs premium du modèle — fire-and-forget
+  void maybeSendPriceAlert({
+    watchModelId,
+    previousPrice: previous ? Number(previous.price) : null,
+    newPrice: research.priceEur,
+  });
   return true;
 }

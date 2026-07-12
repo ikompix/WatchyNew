@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '../db/index.js';
 import { marketPrices, watchModels, wishlistItems } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { countSlots, FREE_SLOT_LIMIT, getLockedIds, getPlan } from '../lib/entitlements.js';
+import { countSlots, getLockedIds, getSlotLimit } from '../lib/entitlements.js';
 import { refreshInBackground } from '../lib/market-research.js';
 import type { ApiResponse, WatchModel, WishlistItem } from '@watchy/types';
 
@@ -136,14 +136,15 @@ router.post('/', async (c) => {
     );
   }
 
-  // Quota free combiné : collection + wishlist = 5 emplacements en tout
-  if ((await getPlan(userId)) === 'free' && (await countSlots(userId)) >= FREE_SLOT_LIMIT) {
+  // Quota free combiné : collection + wishlist (5 gratuits + emplacements achetés)
+  const slotLimit = await getSlotLimit(userId);
+  if (slotLimit != null && (await countSlots(userId)) >= slotLimit) {
     return c.json<ApiResponse<never>>(
       {
         data: null,
         error: {
           code: 'QUOTA_EXCEEDED',
-          message: `Limite de ${FREE_SLOT_LIMIT} montres atteinte (collection + wishlist) — passez à Premium pour l'illimité.`,
+          message: `Limite de ${slotLimit} montres atteinte (collection + wishlist) — passez à Premium pour l'illimité, ou ajoutez des emplacements.`,
         },
       },
       403

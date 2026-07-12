@@ -20,7 +20,7 @@ import { ScreenBackground } from '@/components/screen-background';
 import { PrimaryButton } from '@/components/primary-button';
 
 // Uniquement des features livrées — ne jamais vendre ce qui n'existe pas encore
-const FEATURE_KEYS = ['unlimited', 'dashboard', 'weekly', 'scans'] as const;
+const FEATURE_KEYS = ['unlimited', 'dashboard', 'weekly', 'scans', 'vault', 'alerts'] as const;
 
 /** Paywall partagé : onboarding (premium.tsx) et modal /paywall dans l'app. */
 export function PaywallView({ onDone }: { onDone: () => void }) {

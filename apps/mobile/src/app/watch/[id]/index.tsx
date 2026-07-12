@@ -15,6 +15,7 @@ import { GlassCard } from '@/components/glass-card';
 import { ScreenBackground } from '@/components/screen-background';
 import { CompletionBar } from '@/components/completion-bar';
 import { WatchDial } from '@/components/watch-dial';
+import { WatchDocumentsCard } from '@/components/watch-documents-card';
 
 const euro = formatCurrency;
 
@@ -201,6 +202,9 @@ export default function WatchDetail() {
               <FieldRow label={t('watchDetail.notes')} value={null} />
             )}
           </GlassCard>
+
+          {/* Coffre-fort papiers & factures (premium) */}
+          <WatchDocumentsCard watchId={id} />
 
           {/* Bandeau cote → détail */}
           {watch.watchModelId ? (

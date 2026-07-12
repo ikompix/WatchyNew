@@ -102,7 +102,9 @@
       "unlimited": "Unlimited collection and wishlist — 5 watches on the free plan",
       "dashboard": "Portfolio dashboard: value & capital gains",
       "weekly": "Market value updated weekly — monthly on the free plan",
-      "scans": "Unlimited photo recognitions"
+      "scans": "Unlimited photo recognitions",
+      "vault": "Papers & receipts vault",
+      "alerts": "Alerts when your watches move in value"
     },
     "annual": "Annual",
     "monthly": "Monthly",
@@ -292,7 +294,10 @@
     "deleteAccountMessage": "Your account, collection, photos and wishlist will be permanently erased. This action is irreversible.",
     "deleteAccountConfirm": "Delete permanently",
     "deleteAccountErrorTitle": "Deletion failed",
-    "deleteAccountErrorFallback": "Try again or contact us."
+    "deleteAccountErrorFallback": "Try again or contact us.",
+    "priceAlerts": "Value alerts",
+    "priceAlertsSubtitle": "Get notified when one of your watches moves ±5% in value",
+    "priceAlertsLocked": "Premium members only"
   },
   "premiumGate": {
     "limitTitle": "Limit reached",
@@ -317,7 +322,7 @@
   "errors": {
     "PREMIUM_REQUIRED": "This feature requires Watchy Premium.",
     "QUOTA_EXCEEDED": "Free plan limit reached — upgrade to Premium for unlimited watches.",
-    "SCAN_QUOTA_EXCEEDED": "Monthly recognition limit reached — upgrade to Premium to scan without limits.",
+    "SCAN_QUOTA_EXCEEDED": "Monthly photo recognition limit reached — go Premium for unlimited scans, or buy a scan pack.",
     "NOT_FOUND": "Not found.",
     "UNAUTHORIZED": "You must be signed in.",
     "ALREADY_IN_WISHLIST": "This watch is already in your wishlist.",
@@ -337,5 +342,20 @@
     "missingUrl": "Missing OAuth URL — please try again.",
     "refused": "Sign-in refused",
     "missingCode": "Missing OAuth code in the response."
+  },
+  "documents": {
+    "title": "Papers & receipts",
+    "subtitle": "Photos of your papers, receipts and certificates — in this watch's vault.",
+    "lockedHint": "Document vault — Premium members only",
+    "deleteTitle": "Delete this document?",
+    "deleteMessage": "The document will be permanently deleted.",
+    "deleteHint": "Long-press a document to delete it."
+  },
+  "packs": {
+    "scanPack": "5-scan pack — %{price}",
+    "slotPack": "+3 slots — %{price}",
+    "pendingTitle": "Purchase confirmed",
+    "pendingMessage": "Your credits will be available in a few seconds.",
+    "buyErrorTitle": "Purchase failed"
   }
 }

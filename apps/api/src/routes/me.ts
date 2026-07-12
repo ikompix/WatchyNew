@@ -7,6 +7,7 @@ import {
   aiUsage,
   entitlements,
   featureInterest,
+  notificationPrefs,
   profiles,
   pushTokens,
   recognitionEvents,
@@ -15,15 +16,17 @@ import {
 } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { supabaseAdmin } from '../lib/supabase.js';
+import { deleteUserDocuments } from '../lib/storage.js';
 import {
   countScansThisMonth,
   countWatches,
   countWishlist,
   FREE_SCANS_PER_MONTH,
-  FREE_SLOT_LIMIT,
   getPlan,
+  getScanCredits,
+  getSlotLimit,
 } from '../lib/entitlements.js';
-import type { ApiResponse, MeResult, UserProfile } from '@watchy/types';
+import type { ApiResponse, MeResult, NotificationPrefs, UserProfile } from '@watchy/types';
 
 const router = new Hono<{ Variables: { userId: string } }>();
 
@@ -31,11 +34,13 @@ router.use('*', authMiddleware);
 
 router.get('/', async (c) => {
   const userId = c.get('userId');
-  const [plan, watchCount, wishlistCount, scansUsed] = await Promise.all([
+  const [plan, watchCount, wishlistCount, scansUsed, scanCredits, slotsLimit] = await Promise.all([
     getPlan(userId),
     countWatches(userId),
     countWishlist(userId),
     countScansThisMonth(userId),
+    getScanCredits(userId),
+    getSlotLimit(userId),
   ]);
 
   return c.json<ApiResponse<MeResult>>({
@@ -44,15 +49,20 @@ router.get('/', async (c) => {
       watchCount,
       wishlistCount,
       slotsUsed: watchCount + wishlistCount,
-      slotsLimit: plan === 'premium' ? null : FREE_SLOT_LIMIT,
+      slotsLimit,
       scansUsed,
       scansLimit: plan === 'premium' ? null : FREE_SCANS_PER_MONTH,
+      scanCredits,
     },
     error: null,
   });
 });
 
-const pushTokenSchema = z.object({ token: z.string().min(10).max(400) });
+const pushTokenSchema = z.object({
+  token: z.string().min(10).max(400),
+  // Langue de l'appareil — utilisée par les push automatiques (alertes de cote)
+  locale: z.enum(['fr', 'en']).optional(),
+});
 
 /** Enregistre le jeton Expo Push de l'appareil (upsert — un token change d'utilisateur au re-login). */
 router.post('/push-token', async (c) => {
@@ -64,14 +74,53 @@ router.post('/push-token', async (c) => {
       400
     );
   }
+  const locale = parsed.data.locale ?? 'fr';
   await db
     .insert(pushTokens)
-    .values({ token: parsed.data.token, userId })
+    .values({ token: parsed.data.token, userId, locale })
     .onConflictDoUpdate({
       target: pushTokens.token,
-      set: { userId, updatedAt: new Date() },
+      set: { userId, locale, updatedAt: new Date() },
     });
   return c.json<ApiResponse<{ ok: true }>>({ data: { ok: true }, error: null });
+});
+
+const notificationPrefsSchema = z.object({ priceAlerts: z.boolean() });
+
+/** Préférences de notifications — absence de ligne = tout activé. */
+router.get('/notification-prefs', async (c) => {
+  const userId = c.get('userId');
+  const [row] = await db
+    .select()
+    .from(notificationPrefs)
+    .where(eq(notificationPrefs.userId, userId));
+  return c.json<ApiResponse<NotificationPrefs>>({
+    data: { priceAlerts: row?.priceAlerts ?? true },
+    error: null,
+  });
+});
+
+router.patch('/notification-prefs', async (c) => {
+  const userId = c.get('userId');
+  const parsed = notificationPrefsSchema.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json<ApiResponse<never>>(
+      { data: null, error: { code: 'VALIDATION_ERROR', message: parsed.error.message } },
+      400
+    );
+  }
+  const [row] = await db
+    .insert(notificationPrefs)
+    .values({ userId, priceAlerts: parsed.data.priceAlerts })
+    .onConflictDoUpdate({
+      target: notificationPrefs.userId,
+      set: { priceAlerts: parsed.data.priceAlerts, updatedAt: new Date() },
+    })
+    .returning();
+  return c.json<ApiResponse<NotificationPrefs>>({
+    data: { priceAlerts: row.priceAlerts },
+    error: null,
+  });
 });
 
 // Features teasées dans l'app — étendre l'enum au fil des teasers
@@ -213,6 +262,12 @@ router.delete('/', async (c) => {
     }
   } catch (err) {
     console.error(`[delete-account] purge storage ${userId}:`, err);
+  }
+  // Documents du coffre-fort (bucket privé, même structure plate {userId}/)
+  try {
+    await deleteUserDocuments(userId);
+  } catch (err) {
+    console.error(`[delete-account] purge documents ${userId}:`, err);
   }
 
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);

@@ -102,7 +102,9 @@
       "unlimited": "Collection et wishlist illimitées — 5 montres en gratuit",
       "dashboard": "Tableau de bord patrimonial : valeur & plus-value",
       "weekly": "Cote actualisée chaque semaine — mensuelle en gratuit",
-      "scans": "Reconnaissances photo illimitées"
+      "scans": "Reconnaissances photo illimitées",
+      "vault": "Coffre-fort papiers & factures",
+      "alerts": "Alertes quand la cote de vos montres bouge"
     },
     "annual": "Annuel",
     "monthly": "Mensuel",
@@ -292,7 +294,10 @@
     "deleteAccountMessage": "Votre compte, votre collection, vos photos et votre wishlist seront définitivement effacés. Cette action est irréversible.",
     "deleteAccountConfirm": "Supprimer définitivement",
     "deleteAccountErrorTitle": "Suppression impossible",
-    "deleteAccountErrorFallback": "Réessayez ou contactez-nous."
+    "deleteAccountErrorFallback": "Réessayez ou contactez-nous.",
+    "priceAlerts": "Alertes de cote",
+    "priceAlertsSubtitle": "Soyez prévenu quand la cote d’une de vos montres bouge de ±5 %",
+    "priceAlertsLocked": "Réservé aux membres Premium"
   },
   "premiumGate": {
     "limitTitle": "Limite atteinte",
@@ -323,5 +328,20 @@
     "missingUrl": "URL OAuth manquante — réessayez.",
     "refused": "Connexion refusée",
     "missingCode": "Code OAuth manquant dans la réponse."
+  },
+  "documents": {
+    "title": "Papiers & factures",
+    "subtitle": "Photos de vos papiers, factures et certificats — dans le coffre-fort de la montre.",
+    "lockedHint": "Coffre-fort documents — réservé aux membres Premium",
+    "deleteTitle": "Supprimer ce document ?",
+    "deleteMessage": "Le document sera définitivement supprimé.",
+    "deleteHint": "Appui long sur un document pour le supprimer."
+  },
+  "packs": {
+    "scanPack": "Pack 5 scans — %{price}",
+    "slotPack": "+3 emplacements — %{price}",
+    "pendingTitle": "Achat confirmé",
+    "pendingMessage": "Vos crédits seront disponibles dans quelques secondes.",
+    "buyErrorTitle": "Achat impossible"
   }
 }

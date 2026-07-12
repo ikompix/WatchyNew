@@ -1,6 +1,12 @@
-import { and, count, eq, gte } from 'drizzle-orm';
+import { and, count, eq, gt, gte, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { entitlements, recognitionEvents, watches, wishlistItems } from '../db/schema.js';
+import {
+  entitlements,
+  recognitionEvents,
+  scanCredits,
+  watches,
+  wishlistItems,
+} from '../db/schema.js';
 import type { Plan } from '@watchy/types';
 
 // Quota free COMBINÉ : 5 emplacements en tout, collection + wishlist confondues
@@ -17,6 +23,33 @@ export async function getPlan(userId: string): Promise<Plan> {
   if (!row || row.plan !== 'premium') return 'free';
   if (row.expiresAt && row.expiresAt.getTime() < Date.now()) return 'free';
   return 'premium';
+}
+
+/**
+ * Limite d'emplacements effective : null = illimité (premium), sinon les 5
+ * gratuits + les emplacements achetés à l'unité (extra_slots, permanents —
+ * ils comptent même après l'expiration d'un abonnement).
+ */
+export async function getSlotLimit(userId: string): Promise<number | null> {
+  const [row] = await db.select().from(entitlements).where(eq(entitlements.userId, userId));
+  const isPremium =
+    row?.plan === 'premium' && (!row.expiresAt || row.expiresAt.getTime() >= Date.now());
+  if (isPremium) return null;
+  return FREE_SLOT_LIMIT + (row?.extraSlots ?? 0);
+}
+
+/** Utilisateurs premium actifs (même définition que la page Revenus du BO). */
+export async function premiumUserIds(): Promise<string[]> {
+  const rows = await db
+    .select({ userId: entitlements.userId })
+    .from(entitlements)
+    .where(
+      and(
+        eq(entitlements.plan, 'premium'),
+        or(isNull(entitlements.expiresAt), gt(entitlements.expiresAt, new Date()))
+      )
+    );
+  return rows.map((r) => r.userId);
 }
 
 export async function countWatches(userId: string): Promise<number> {
@@ -42,16 +75,18 @@ export async function countSlots(userId: string): Promise<number> {
 }
 
 /**
- * Éléments verrouillés d'un compte free : au-delà des FREE_SLOT_LIMIT plus
- * anciens (collection + wishlist confondues, createdAt croissant), tout est
- * verrouillé — jamais supprimé. Calcul dynamique : supprimer un élément ou
- * repasser premium déverrouille sans migration.
+ * Éléments verrouillés d'un compte free : au-delà de la limite (5 gratuits +
+ * emplacements achetés) les plus anciens (collection + wishlist confondues,
+ * createdAt croissant), tout est verrouillé — jamais supprimé. Calcul
+ * dynamique : supprimer un élément, acheter des emplacements ou repasser
+ * premium déverrouille sans migration.
  */
 export async function getLockedIds(
   userId: string
 ): Promise<{ watchIds: Set<string>; wishlistIds: Set<string> }> {
   const none = { watchIds: new Set<string>(), wishlistIds: new Set<string>() };
-  if ((await getPlan(userId)) === 'premium') return none;
+  const limit = await getSlotLimit(userId);
+  if (limit == null) return none;
 
   const [watchRows, wishlistRows] = await Promise.all([
     db
@@ -69,10 +104,24 @@ export async function getLockedIds(
     ...wishlistRows.map((r) => ({ ...r, kind: 'wishlist' as const })),
   ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-  for (const item of all.slice(FREE_SLOT_LIMIT)) {
+  for (const item of all.slice(limit)) {
     (item.kind === 'watch' ? none.watchIds : none.wishlistIds).add(item.id);
   }
   return none;
+}
+
+/** Solde de crédits de scans achetés (packs consommables) — sum(delta) du ledger. */
+export async function getScanCredits(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ value: sql<number>`coalesce(sum(${scanCredits.delta}), 0)::int` })
+    .from(scanCredits)
+    .where(eq(scanCredits.userId, userId));
+  return row?.value ?? 0;
+}
+
+/** Consomme un crédit de scan (le quota mensuel gratuit s'épuise d'abord). */
+export async function consumeScanCredit(userId: string): Promise<void> {
+  await db.insert(scanCredits).values({ userId, delta: -1, reason: 'scan' });
 }
 
 /** Reconnaissances lancées sur le mois calendaire en cours (UTC). */

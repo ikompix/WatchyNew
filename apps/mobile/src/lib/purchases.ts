@@ -6,6 +6,8 @@ import { t } from './i18n';
 export type PlanId = 'monthly' | 'annual';
 export type PurchaseResult = 'done' | 'cancelled' | 'stub';
 export type RestoreResult = 'done' | 'none' | 'stub';
+/** Packs consommables (hors entitlement) — mêmes ids que RC/ASC et le webhook API. */
+export type ConsumableId = 'watchy_scans_5' | 'watchy_slots_3';
 
 type PurchasesModule = typeof import('react-native-purchases').default;
 type Offerings = import('react-native-purchases').PurchasesOfferings;
@@ -136,6 +138,37 @@ export async function purchasePlan(plan: PlanId): Promise<PurchaseResult> {
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     return customerInfo.entitlements.active['premium'] ? 'done' : 'cancelled';
+  } catch (err) {
+    if ((err as { userCancelled?: boolean }).userCancelled) return 'cancelled';
+    throw err;
+  }
+}
+
+/** Prix localisé d'un pack consommable — null en stub ou produit absent. */
+export async function getConsumablePrice(id: ConsumableId): Promise<string | null> {
+  const Purchases = await configuredPurchases();
+  if (!Purchases) return null;
+  try {
+    const [product] = await Purchases.getProducts([id]);
+    return product?.priceString ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Achat d'un pack consommable. Pas d'entitlement à vérifier (succès = pas
+ * d'exception) : le crédit serveur arrive via le webhook RevenueCat, avec une
+ * latence de quelques secondes.
+ */
+export async function purchaseConsumable(id: ConsumableId): Promise<PurchaseResult> {
+  const Purchases = await configuredPurchases();
+  if (!Purchases) return 'stub';
+  try {
+    const [product] = await Purchases.getProducts([id]);
+    if (!product) throw new Error(t('purchases.offerUnavailable'));
+    await Purchases.purchaseStoreProduct(product);
+    return 'done';
   } catch (err) {
     if ((err as { userCancelled?: boolean }).userCancelled) return 'cancelled';
     throw err;

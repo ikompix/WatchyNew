@@ -9,8 +9,9 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
 import { useEffect, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -19,11 +20,10 @@ import { getOnboarded } from '@/lib/onboarding';
 import { loadLocaleOverride } from '@/lib/i18n';
 import { initPurchasesListener } from '@/lib/purchases';
 import { registerPushToken } from '@/lib/push';
+import { queryClient } from '@/lib/query-client';
 import { Brand } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
-
-const queryClient = new QueryClient();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -45,6 +45,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     // couvre la rotation de jeton et les utilisateurs ayant déjà accepté
     if (session) registerPushToken();
   }, [session]);
+
+  useEffect(() => {
+    // Deep-link au tap sur une notification (alertes de cote : data.url)
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const url = response.notification.request.content.data?.url;
+      if (typeof url === 'string' && url.startsWith('/')) {
+        router.push(url as Parameters<typeof router.push>[0]);
+      }
+    });
+    return () => sub.remove();
+  }, [router]);
 
   useEffect(() => {
     if (session === undefined || onboarded === undefined) return;

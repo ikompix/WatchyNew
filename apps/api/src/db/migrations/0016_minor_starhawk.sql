@@ -1,0 +1,1 @@
+ALTER TABLE "entitlements" ADD COLUMN "extra_slots" integer DEFAULT 0 NOT NULL;

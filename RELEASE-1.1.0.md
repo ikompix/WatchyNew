@@ -4,16 +4,12 @@
 il remplace le build 6 (il ajoute les notifications push opt-in + page BO).
 Ce fichier regroupe tout ce qui se fait à la main dans les dashboards.
 
-## 0. Test push de bout en bout (avant Submit for Review)
+## 0. Test push de bout en bout — ✅ validé le 2026-07-10
 
-1. Installer le **build 7** via TestFlight sur iPhone réel, se connecter, activer
-   les notifications (onboarding ou Profil → Notifications).
-2. `https://api.watchy-app.com/admin` (jeton maître) → **Notifications** →
-   segment **Test** + ton e-mail → envoyer → la notification doit arriver sur
-   l'iPhone. Ça valide la Push Key APNs (`X5CQD45H6V`, héritée de mai 2025 —
-   si rien n'arrive, elle a peut-être été révoquée : `eas credentials` → iOS →
-   production → Push Notifications → Set up, puis rebuild inutile, la clé est
-   côté serveur Expo).
+Fait sur iPhone réel (build 7) : jeton enregistré, envoi BO segment Test,
+receipt Expo `ok`, notification reçue. Au passage, l'ancienne Push Key APNs
+héritée du prototype (`X5CQD45H6V`, invalide → `InvalidProviderToken`) a été
+remplacée par `72YT24P752` via `eas credentials` — aucun rebuild nécessaire.
 
 ## 1. App Store Connect — version 1.1.0
 

@@ -9,7 +9,7 @@
 // Ces textes doivent aussi être accessibles sur une URL publique
 // renseignée dans App Store Connect.
 
-export const LEGAL_UPDATED = '10 juillet 2026';
+export const LEGAL_UPDATED = '12 juillet 2026';
 
 export const LEGAL_NOTICE_TEXT = `## 1. Éditeur
 
@@ -80,7 +80,9 @@ L'abonnement Watchy Premium comprend, selon les fonctionnalités disponibles dan
 
 - l'ajout illimité de montres, en collection comme en liste de souhaits ;
 - des identifications de montres par intelligence artificielle sans limite quantitative, dans le cadre d'un usage personnel normal et raisonnable ;
-- l'actualisation indicative de la cote de la collection environ tous les 7 jours.
+- l'actualisation indicative de la cote de la collection environ tous les 7 jours ;
+- des notifications facultatives d'évolution de la cote de vos montres (désactivables depuis le profil) ;
+- un espace de stockage de documents (photos de papiers, factures, certificats) attachés à vos montres.
 
 Les fonctionnalités incluses dans chaque offre, leurs limites éventuelles et leur disponibilité sont affichées dans l'Application avant toute souscription.
 
@@ -88,6 +90,13 @@ Les tarifs actuellement proposés sont les suivants :
 
 - Watchy Premium mensuel : 4,99 € TTC par mois ;
 - Watchy Premium annuel : 39,99 € TTC par an.
+
+Des achats à l'unité (« packs ») peuvent également être proposés dans l'Application, notamment :
+
+- pack de 5 identifications par intelligence artificielle : 1,99 € TTC ;
+- pack de 3 emplacements supplémentaires (collection et liste de souhaits confondues) : 2,99 € TTC.
+
+Les packs sont des achats ponctuels, sans renouvellement automatique. Les crédits d'identification s'utilisent après épuisement du quota mensuel gratuit et n'expirent pas ; les emplacements supplémentaires sont acquis définitivement pour le compte. Une fois consommés, les crédits ne sont pas remboursables, sans préjudice des droits légaux applicables et des conditions de remboursement d'Apple.
 
 Un essai gratuit de 7 jours peut être proposé lorsque cela est indiqué au moment de la souscription.
 
@@ -206,10 +215,11 @@ Selon votre utilisation de l'Application, Watchy peut traiter les catégories de
 - Données de compte : adresse e-mail, identifiant technique de compte et, le cas échéant, identifiant transmis par le fournisseur de connexion choisi.
 - Données de profil déclaratives et facultatives : tranche d'âge, ville et pays de résidence, niveau de connaissance horlogère, et réponse à la question « Comment nous avez-vous connu ? ». Ces informations sont fournies librement, modifiables à tout moment depuis l'Application et ne conditionnent aucune fonctionnalité. Watchy ne demande jamais de date de naissance ni d'adresse postale complète.
 - Données de collection : marque, modèle, référence, informations renseignées sur la montre, prix d'achat, date d'achat, état, notes et photos.
+- Documents d'achat (abonnés Premium) : photos de papiers, factures ou certificats que vous choisissez d'attacher à vos montres. Ces documents sont stockés dans un espace privé, accessibles uniquement depuis votre compte via des liens temporaires signés, et supprimés avec la montre ou le compte.
 - Données de liste de souhaits : modèles suivis et photos éventuellement ajoutées.
 - Données liées aux analyses par intelligence artificielle : photos, informations relatives à la montre et requêtes nécessaires à l'identification, l'analyse ou l'estimation.
 - Données d'abonnement : statut de l'abonnement, formule souscrite, date d'expiration et identifiants techniques transmis par Apple et RevenueCat.
-- Données de notification : jeton technique nécessaire à l'envoi de notifications push, lorsque vous les avez autorisées.
+- Données de notification : jeton technique nécessaire à l'envoi de notifications push et langue de l'appareil (pour envoyer les notifications dans votre langue), lorsque vous les avez autorisées. Les abonnés Premium peuvent recevoir des alertes automatiques d'évolution de cote, désactivables à tout moment depuis le profil.
 - Données techniques et de sécurité : informations strictement nécessaires au fonctionnement, à la sécurité, à la prévention de la fraude, au respect des quotas et au traitement des incidents.
 
 Watchy ne collecte pas vos données bancaires. Les paiements sont traités par Apple via l'App Store.

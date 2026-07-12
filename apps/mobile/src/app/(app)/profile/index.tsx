@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Linking, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
@@ -14,6 +14,7 @@ import { presentCustomerCenter, restorePurchases } from '@/lib/purchases';
 import { apiDelete, unwrap } from '@/lib/api-client';
 import { apiErrorMessage } from '@/lib/premium-gate';
 import { useMe } from '@/hooks/use-entitlement';
+import { useNotificationPrefs, useUpdateNotificationPrefs } from '@/hooks/use-notification-prefs';
 import { Brand, CardGap, Gutter, Radii, Spacing } from '@/constants/theme';
 import { useLocaleStore, useT, type LocaleOverride } from '@/lib/i18n';
 import { ThemedText } from '@/components/themed-text';
@@ -83,6 +84,11 @@ export default function Profile() {
     });
     return () => sub.remove();
   }, []);
+
+  // Alertes de cote (premium) : préférence serveur, indépendante de la
+  // permission système (qui reste la première barrière)
+  const notifPrefs = useNotificationPrefs(isPremium);
+  const updatePrefs = useUpdateNotificationPrefs();
 
   async function handleNotifications() {
     if (notifStatus === 'granted') return;
@@ -232,6 +238,38 @@ export default function Profile() {
               <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
             )}
           </Pressable>
+          <View style={styles.rowDivider} />
+          {isPremium ? (
+            <View style={styles.row}>
+              <View style={styles.rowIcon}>
+                <SymbolView name="chart.line.uptrend.xyaxis" size={16} tintColor={Brand.accent} />
+              </View>
+              <View style={styles.rowText}>
+                <ThemedText type="smallBold">{t('profile.priceAlerts')}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {t('profile.priceAlertsSubtitle')}
+                </ThemedText>
+              </View>
+              <Switch
+                value={notifPrefs.data?.priceAlerts ?? true}
+                onValueChange={(value) => updatePrefs.mutate({ priceAlerts: value })}
+                disabled={notifPrefs.isLoading}
+              />
+            </View>
+          ) : (
+            <Pressable style={styles.row} onPress={() => router.push('/paywall')}>
+              <View style={styles.rowIcon}>
+                <SymbolView name="lock.fill" size={16} tintColor={Brand.inkSecondary} />
+              </View>
+              <View style={styles.rowText}>
+                <ThemedText type="smallBold">{t('profile.priceAlerts')}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {t('profile.priceAlertsLocked')}
+                </ThemedText>
+              </View>
+              <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />
+            </Pressable>
+          )}
         </GlassCard>
 
         <GlassCard style={styles.card}>

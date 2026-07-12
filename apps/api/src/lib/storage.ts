@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { supabaseAdmin } from './supabase.js';
 
 const BUCKET = 'watch-photos';
+// Bucket PRIVÉ (documents sensibles : papiers, factures) — accès uniquement
+// par URL signée courte durée, jamais d'URL publique
+const DOCUMENTS_BUCKET = 'watch-documents';
 
 const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -42,4 +45,50 @@ export async function uploadWatchPhoto(
 
   const { data } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
+}
+
+/**
+ * Upload d'un document de coffre-fort dans le bucket privé. Chemin PLAT
+ * `${userId}/${uuid}.ext` — la purge de compte réutilise ainsi le même
+ * `list(userId)` non récursif que pour les photos.
+ */
+export async function uploadWatchDocument(
+  userId: string,
+  imageBase64: string,
+  mimeType: string
+): Promise<{ path: string; sizeBytes: number }> {
+  const ext = EXTENSIONS[mimeType] ?? 'jpg';
+  const path = `${userId}/${randomUUID()}.${ext}`;
+  const buffer = Buffer.from(imageBase64, 'base64');
+
+  const { error } = await supabaseAdmin.storage.from(DOCUMENTS_BUCKET).upload(path, buffer, {
+    contentType: mimeType,
+  });
+  if (error) throw new Error(`Document upload failed: ${error.message}`);
+
+  return { path, sizeBytes: buffer.length };
+}
+
+/** URL signée courte durée (1 h) — générée à chaque lecture, jamais persistée. */
+export async function signDocumentUrl(path: string): Promise<string> {
+  const { data, error } = await supabaseAdmin.storage
+    .from(DOCUMENTS_BUCKET)
+    .createSignedUrl(path, 3600);
+  if (error || !data) throw new Error(`Document sign failed: ${error?.message}`);
+  return data.signedUrl;
+}
+
+/** Suppression best-effort de fichiers du coffre-fort (l'appelant logge). */
+export async function deleteDocuments(paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  const { error } = await supabaseAdmin.storage.from(DOCUMENTS_BUCKET).remove(paths);
+  if (error) console.error(`[storage] purge documents: ${error.message}`);
+}
+
+/** Purge le dossier documents d'un utilisateur (suppression de compte). */
+export async function deleteUserDocuments(userId: string): Promise<void> {
+  const { data: files } = await supabaseAdmin.storage.from(DOCUMENTS_BUCKET).list(userId);
+  if (files?.length) {
+    await deleteDocuments(files.map((f) => `${userId}/${f.name}`));
+  }
 }

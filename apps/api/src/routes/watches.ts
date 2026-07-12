@@ -1,13 +1,25 @@
 import { Hono } from 'hono';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../db/index.js';
-import { watches } from '../db/schema.js';
+import { watches, watchDocuments } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { countSlots, FREE_SLOT_LIMIT, getLockedIds, getPlan } from '../lib/entitlements.js';
+import { countSlots, getLockedIds, getPlan, getSlotLimit } from '../lib/entitlements.js';
 import { nicknameForReference } from '../lib/nickname-map.js';
+import {
+  deleteDocuments,
+  signDocumentUrl,
+  sniffImageMime,
+  uploadWatchDocument,
+} from '../lib/storage.js';
 import { computeCompletionPct } from '@watchy/types';
-import type { CreateWatchDto, UpdateWatchDto, ApiResponse, Watch } from '@watchy/types';
+import type {
+  CreateWatchDto,
+  UpdateWatchDto,
+  ApiResponse,
+  Watch,
+  WatchDocument,
+} from '@watchy/types';
 
 const router = new Hono<{ Variables: { userId: string } }>();
 
@@ -74,16 +86,18 @@ router.post('/', async (c) => {
     );
   }
 
-  // Plan free : 5 emplacements EN TOUT (collection + wishlist). L'existant
-  // au-delà de la limite n'est jamais supprimé — il est verrouillé en lecture
-  // (voir getLockedIds), la suppression restant possible pour libérer un slot.
-  if ((await getPlan(userId)) === 'free' && (await countSlots(userId)) >= FREE_SLOT_LIMIT) {
+  // Plan free : 5 emplacements EN TOUT (collection + wishlist), plus les
+  // emplacements achetés à l'unité. L'existant au-delà de la limite n'est
+  // jamais supprimé — il est verrouillé en lecture (voir getLockedIds), la
+  // suppression restant possible pour libérer un slot.
+  const slotLimit = await getSlotLimit(userId);
+  if (slotLimit != null && (await countSlots(userId)) >= slotLimit) {
     return c.json<ApiResponse<never>>(
       {
         data: null,
         error: {
           code: 'QUOTA_EXCEEDED',
-          message: `Limite de ${FREE_SLOT_LIMIT} montres atteinte (collection + wishlist) — passez à Premium pour l'illimité.`,
+          message: `Limite de ${slotLimit} montres atteinte (collection + wishlist) — passez à Premium pour l'illimité, ou ajoutez des emplacements.`,
         },
       },
       403
@@ -239,6 +253,12 @@ router.patch('/:id', async (c) => {
 router.delete('/:id', async (c) => {
   const userId = c.get('userId');
   const id = c.req.param('id');
+  // Les lignes watch_documents partent en cascade FK, pas les fichiers du
+  // bucket — récupérer les chemins avant le delete
+  const docs = await db
+    .select({ path: watchDocuments.path })
+    .from(watchDocuments)
+    .where(and(eq(watchDocuments.watchId, id), eq(watchDocuments.userId, userId)));
   const [deleted] = await db
     .delete(watches)
     .where(and(eq(watches.id, id), eq(watches.userId, userId)))
@@ -250,7 +270,164 @@ router.delete('/:id', async (c) => {
       404
     );
   }
+  await deleteDocuments(docs.map((d) => d.path));
   return c.json<ApiResponse<{ id: string }>>({ data: { id }, error: null });
+});
+
+// ── Coffre-fort documents (premium) ─────────────────────────────────────────
+
+const MAX_DOCS_PER_WATCH = 10;
+
+const addDocumentSchema = z.object({
+  // ~8 Mo binaire une fois le base64 décodé
+  imageBase64: z.string().min(1).max(11_000_000),
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  label: z.string().trim().min(1).max(120).optional(),
+});
+
+/**
+ * Gate commun : la montre doit appartenir au user (404 sinon) et le compte
+ * être premium (403 PREMIUM_REQUIRED sinon — les documents d'un compte
+ * repassé free sont gardés mais gatés, comme getLockedIds).
+ */
+async function documentsGate(userId: string, watchId: string): Promise<
+  { ok: true } | { ok: false; status: 403 | 404; code: string; message: string }
+> {
+  const [row] = await db
+    .select({ id: watches.id })
+    .from(watches)
+    .where(and(eq(watches.id, watchId), eq(watches.userId, userId)));
+  if (!row) {
+    return { ok: false, status: 404, code: 'NOT_FOUND', message: 'Watch not found' };
+  }
+  if ((await getPlan(userId)) !== 'premium') {
+    return {
+      ok: false,
+      status: 403,
+      code: 'PREMIUM_REQUIRED',
+      message: 'Le coffre-fort documents est réservé aux membres Premium.',
+    };
+  }
+  return { ok: true };
+}
+
+router.get('/:id/documents', async (c) => {
+  const userId = c.get('userId');
+  const watchId = c.req.param('id');
+  const gate = await documentsGate(userId, watchId);
+  if (!gate.ok) {
+    return c.json<ApiResponse<never>>(
+      { data: null, error: { code: gate.code, message: gate.message } },
+      gate.status
+    );
+  }
+
+  const rows = await db
+    .select()
+    .from(watchDocuments)
+    .where(and(eq(watchDocuments.watchId, watchId), eq(watchDocuments.userId, userId)));
+  const data = await Promise.all(
+    rows.map(async (r) => ({
+      id: r.id,
+      label: r.label,
+      mimeType: r.mimeType,
+      sizeBytes: r.sizeBytes,
+      createdAt: r.createdAt.toISOString(),
+      url: await signDocumentUrl(r.path),
+    }))
+  );
+  return c.json<ApiResponse<WatchDocument[]>>({ data, error: null });
+});
+
+router.post('/:id/documents', async (c) => {
+  const userId = c.get('userId');
+  const watchId = c.req.param('id');
+  const parsed = addDocumentSchema.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json<ApiResponse<never>>(
+      { data: null, error: { code: 'VALIDATION_ERROR', message: parsed.error.message } },
+      400
+    );
+  }
+  const gate = await documentsGate(userId, watchId);
+  if (!gate.ok) {
+    return c.json<ApiResponse<never>>(
+      { data: null, error: { code: gate.code, message: gate.message } },
+      gate.status
+    );
+  }
+
+  const [{ value: docCount }] = await db
+    .select({ value: count() })
+    .from(watchDocuments)
+    .where(eq(watchDocuments.watchId, watchId));
+  if (docCount >= MAX_DOCS_PER_WATCH) {
+    return c.json<ApiResponse<never>>(
+      {
+        data: null,
+        error: {
+          code: 'QUOTA_EXCEEDED',
+          message: `Limite de ${MAX_DOCS_PER_WATCH} documents par montre atteinte.`,
+        },
+      },
+      403
+    );
+  }
+
+  const buffer = Buffer.from(parsed.data.imageBase64, 'base64');
+  const mime = sniffImageMime(buffer) ?? parsed.data.mimeType;
+  const { path, sizeBytes } = await uploadWatchDocument(userId, parsed.data.imageBase64, mime);
+  const [created] = await db
+    .insert(watchDocuments)
+    .values({ userId, watchId, path, mimeType: mime, sizeBytes, label: parsed.data.label })
+    .returning();
+
+  return c.json<ApiResponse<WatchDocument>>(
+    {
+      data: {
+        id: created.id,
+        label: created.label,
+        mimeType: created.mimeType,
+        sizeBytes: created.sizeBytes,
+        createdAt: created.createdAt.toISOString(),
+        url: await signDocumentUrl(created.path),
+      },
+      error: null,
+    },
+    201
+  );
+});
+
+router.delete('/:id/documents/:docId', async (c) => {
+  const userId = c.get('userId');
+  const watchId = c.req.param('id');
+  const docId = c.req.param('docId');
+  const gate = await documentsGate(userId, watchId);
+  if (!gate.ok) {
+    return c.json<ApiResponse<never>>(
+      { data: null, error: { code: gate.code, message: gate.message } },
+      gate.status
+    );
+  }
+
+  const [deleted] = await db
+    .delete(watchDocuments)
+    .where(
+      and(
+        eq(watchDocuments.id, docId),
+        eq(watchDocuments.watchId, watchId),
+        eq(watchDocuments.userId, userId)
+      )
+    )
+    .returning();
+  if (!deleted) {
+    return c.json<ApiResponse<never>>(
+      { data: null, error: { code: 'NOT_FOUND', message: 'Document not found' } },
+      404
+    );
+  }
+  await deleteDocuments([deleted.path]);
+  return c.json<ApiResponse<{ id: string }>>({ data: { id: docId }, error: null });
 });
 
 export { router as watchesRouter };

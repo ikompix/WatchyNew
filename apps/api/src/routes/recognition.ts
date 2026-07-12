@@ -4,7 +4,13 @@ import { z } from 'zod';
 import { db } from '../db/index.js';
 import { recognitionEvents, watchModels } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { countScansThisMonth, FREE_SCANS_PER_MONTH, getPlan } from '../lib/entitlements.js';
+import {
+  consumeScanCredit,
+  countScansThisMonth,
+  FREE_SCANS_PER_MONTH,
+  getPlan,
+  getScanCredits,
+} from '../lib/entitlements.js';
 import { sniffImageMime, uploadWatchPhoto } from '../lib/storage.js';
 import { identifyWatch } from '../lib/recognition.js';
 import { getLocale } from '../lib/locale.js';
@@ -68,22 +74,29 @@ router.post('/', async (c) => {
     );
   }
 
-  // Plan free : 5 reconnaissances/mois — bloqué avant tout upload,
-  // chaque scan coûte un appel Anthropic
+  // Plan free : 5 reconnaissances/mois — bloqué avant tout upload, chaque
+  // scan coûte un appel Anthropic. Le mensuel gratuit s'épuise d'abord, puis
+  // les crédits achetés en pack (jamais l'inverse : les crédits ne brûlent
+  // pas tant qu'il reste du gratuit).
+  let usePaidCredit = false;
   if (
     (await getPlan(userId)) === 'free' &&
     (await countScansThisMonth(userId)) >= FREE_SCANS_PER_MONTH
   ) {
-    return c.json<ApiResponse<never>>(
-      {
-        data: null,
-        error: {
-          code: 'SCAN_QUOTA_EXCEEDED',
-          message: `Limite de ${FREE_SCANS_PER_MONTH} reconnaissances par mois atteinte — passez à Premium pour scanner sans limite.`,
+    if ((await getScanCredits(userId)) > 0) {
+      usePaidCredit = true;
+    } else {
+      return c.json<ApiResponse<never>>(
+        {
+          data: null,
+          error: {
+            code: 'SCAN_QUOTA_EXCEEDED',
+            message: `Limite de ${FREE_SCANS_PER_MONTH} reconnaissances par mois atteinte — passez à Premium pour scanner sans limite, ou achetez un pack de scans.`,
+          },
         },
-      },
-      403
-    );
+        403
+      );
+    }
   }
 
   const { imageBase64 } = parsed.data;
@@ -95,6 +108,8 @@ router.post('/', async (c) => {
   try {
     // Le quota compte les tentatives réelles (l'appel IA est facturé même s'il échoue ensuite)
     await db.insert(recognitionEvents).values({ userId });
+    // Au-delà du mensuel gratuit : le scan débite un crédit acheté
+    if (usePaidCredit) await consumeScanCredit(userId);
     identification = await identifyWatch(imageBase64, mimeType, userId, getLocale(c));
   } catch (err) {
     // Recognition is best-effort — the photo is already stored, the user falls back to manual entry

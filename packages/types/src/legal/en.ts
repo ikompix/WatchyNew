@@ -4,7 +4,7 @@
 
 const COURTESY_NOTE = `This is a courtesy translation provided for convenience. In case of any discrepancy, the French version prevails. These documents are governed by French law.`;
 
-export const LEGAL_UPDATED = 'July 10, 2026';
+export const LEGAL_UPDATED = 'July 12, 2026';
 
 export const LEGAL_NOTICE_TEXT = `${COURTESY_NOTE}
 
@@ -79,7 +79,9 @@ The Watchy Premium subscription includes, depending on the features available in
 
 - unlimited addition of watches, in both the collection and the wishlist;
 - watch identifications by artificial intelligence without quantitative limit, within the scope of normal and reasonable personal use;
-- an indicative update of the collection's market value approximately every 7 days.
+- an indicative update of the collection's market value approximately every 7 days;
+- optional notifications when the market value of your watches moves (can be disabled from your profile);
+- a document storage space (photos of papers, receipts, certificates) attached to your watches.
 
 The features included in each offer, their possible limits and their availability are displayed in the Application before any subscription.
 
@@ -87,6 +89,13 @@ The prices currently offered are as follows:
 
 - Watchy Premium monthly: €4.99 incl. VAT per month;
 - Watchy Premium annual: €39.99 incl. VAT per year.
+
+One-time purchases ("packs") may also be offered in the Application, in particular:
+
+- pack of 5 artificial-intelligence identifications: €1.99 incl. VAT;
+- pack of 3 additional slots (collection and wishlist combined): €2.99 incl. VAT.
+
+Packs are one-time purchases with no automatic renewal. Identification credits are used after the free monthly quota is exhausted and do not expire; additional slots are permanently acquired for the account. Once consumed, credits are non-refundable, without prejudice to applicable statutory rights and Apple's refund policies.
 
 A 7-day free trial may be offered when indicated at the time of subscription.
 
@@ -207,10 +216,11 @@ Depending on your use of the Application, Watchy may process the following categ
 - Account data: email address, technical account identifier and, where applicable, the identifier transmitted by the chosen sign-in provider.
 - Optional self-declared profile data: age range, city and country of residence, level of watch knowledge, and the answer to the question "How did you hear about us?". This information is provided freely, can be modified at any time from the Application and does not condition any feature. Watchy never asks for a date of birth or a full postal address.
 - Collection data: brand, model, reference, information entered about the watch, purchase price, purchase date, condition, notes and photos.
+- Purchase documents (Premium subscribers): photos of papers, receipts or certificates you choose to attach to your watches. These documents are stored in a private space, accessible only from your account via temporary signed links, and deleted with the watch or the account.
 - Wishlist data: tracked models and any photos added.
 - Data related to artificial intelligence analyses: photos, information about the watch and the requests necessary for identification, analysis or estimation.
 - Subscription data: subscription status, plan subscribed, expiry date and technical identifiers transmitted by Apple and RevenueCat.
-- Notification data: the technical token required to send push notifications, when you have authorized them.
+- Notification data: the technical token required to send push notifications and the device language (to send notifications in your language), when you have authorized them. Premium subscribers may receive automatic market-value alerts, which can be disabled at any time from the profile.
 - Technical and security data: information strictly necessary for operation, security, fraud prevention, quota enforcement and incident handling.
 
 Watchy does not collect your banking data. Payments are processed by Apple via the App Store.
