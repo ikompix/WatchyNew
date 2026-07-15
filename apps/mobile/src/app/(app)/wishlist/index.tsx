@@ -9,7 +9,13 @@ import type { WishlistItem } from '@watchy/types';
 
 import { useAddToWishlist, useRemoveFromWishlist, useWishlist } from '@/hooks/use-wishlist';
 import { useRecognizeWatch } from '@/hooks/use-recognition';
-import { apiErrorMessage, handlePremiumGate } from '@/lib/premium-gate';
+import {
+  apiErrorMessage,
+  blockIfPoolFull,
+  handlePremiumGate,
+  slotPackButton,
+} from '@/lib/premium-gate';
+import { useMe } from '@/hooks/use-entitlement';
 import { Brand, Gutter, Radii, Spacing } from '@/constants/theme';
 import { t, useT } from '@/lib/i18n';
 import { formatCurrency } from '@/lib/format';
@@ -80,6 +86,7 @@ export default function Wishlist() {
   const addItem = useAddToWishlist();
   const removeItem = useRemoveFromWishlist();
   const recognize = useRecognizeWatch();
+  const { data: me } = useMe();
   const [adding, setAdding] = useState(false);
   // Photo identifiée en attente d'attachement à l'item ajouté
   const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
@@ -93,7 +100,7 @@ export default function Wishlist() {
           setPendingPhoto(null);
         },
         onError: (err) => {
-          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'))) {
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'), 'wishlist')) {
             Alert.alert(t('wishlist.addErrorTitle'), apiErrorMessage(err));
           }
         },
@@ -102,8 +109,10 @@ export default function Wishlist() {
   }
 
   // Photo facultative → identification vision (même mécanisme que l'ajout
-  // collection, quota scans partagé) → ajout direct ou saisie préremplie
+  // collection, gated par les slots wishlist) → ajout direct ou saisie préremplie
   async function identifyByPhoto() {
+    // Wishlist pleine : on bloque avant la galerie (le scan coûte un appel IA)
+    if (blockIfPoolFull(me, 'wishlist')) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(t('wishlist.photoPermissionTitle'), t('wishlist.photoPermissionMessage'));
@@ -118,7 +127,7 @@ export default function Wishlist() {
     if (result.canceled || !asset?.base64) return;
 
     recognize.mutate(
-      { imageBase64: asset.base64, mimeType: 'image/jpeg' },
+      { imageBase64: asset.base64, mimeType: 'image/jpeg', target: 'wishlist' },
       {
         onSuccess: (data) => {
           setPendingPhoto(data.photoUrl);
@@ -136,7 +145,7 @@ export default function Wishlist() {
           }
         },
         onError: (err) => {
-          if (!handlePremiumGate(err, t('wishlist.scanLimitTitle'))) {
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'), 'wishlist')) {
             Alert.alert(t('wishlist.analysisErrorTitle'), apiErrorMessage(err));
           }
         },
@@ -145,17 +154,22 @@ export default function Wishlist() {
   }
 
   function openActions(item: WishlistItem) {
-    // Item verrouillé (free au-delà du quota) : repasser Premium ou libérer l'emplacement
+    // Item verrouillé (free au-delà du quota) : Premium, +1 emplacement (le
+    // slot acheté déverrouille) ou libérer l'emplacement
     if (item.locked) {
-      Alert.alert(t('collection.lockedTitle'), t('wishlist.lockedMessage'), [
-        { text: t('premiumGate.seePremium'), onPress: () => router.push('/paywall') },
-        {
-          text: t('wishlist.remove'),
-          style: 'destructive',
-          onPress: () => removeItem.mutate(item.id),
-        },
-        { text: t('common.cancel'), style: 'cancel' },
-      ]);
+      void (async () => {
+        const packBtn = await slotPackButton('wishlist');
+        Alert.alert(t('collection.lockedTitle'), t('wishlist.lockedMessage'), [
+          { text: t('premiumGate.seePremium'), onPress: () => router.push('/paywall') },
+          ...(packBtn ? [packBtn] : []),
+          {
+            text: t('wishlist.remove'),
+            style: 'destructive',
+            onPress: () => removeItem.mutate(item.id),
+          },
+          { text: t('common.cancel'), style: 'cancel' },
+        ]);
+      })();
       return;
     }
     Alert.alert(item.model.canonicalName, undefined, [

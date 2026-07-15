@@ -15,7 +15,7 @@
   "collection": {
     "title": "Collection",
     "lockedTitle": "Watch locked",
-    "lockedMessage": "Upgrade to Premium to access it again, or free up a slot by deleting it.",
+    "lockedMessage": "Upgrade to Premium, add a slot, or free one up by deleting it.",
     "deleteEllipsis": "Delete…",
     "deleteConfirmTitle": "Delete this watch?",
     "deleteConfirmMessage": "%{brand} %{model} will be removed from your collection. This action is permanent.",
@@ -39,7 +39,6 @@
     "title": "Wishlist",
     "marketPriceLabel": "market",
     "watchLimitTitle": "Watch limit reached",
-    "scanLimitTitle": "Scan limit reached",
     "addErrorTitle": "Unable to add",
     "analysisErrorTitle": "Analysis failed",
     "photoPermissionTitle": "Permission denied",
@@ -48,7 +47,7 @@
     "unknownModel": "Unknown model",
     "notRecognizedTitle": "Watch not recognized",
     "notRecognizedMessage": "The photo is attached — search for the model or enter it manually.",
-    "lockedMessage": "Upgrade to Premium to access it again, or free up a slot by removing it.",
+    "lockedMessage": "Upgrade to Premium, add a slot, or free one up by removing it.",
     "remove": "Remove from wishlist",
     "identifyByPhoto": "Identify by photo (optional)",
     "photoAttached": "Photo attached — it will illustrate this watch.",
@@ -99,10 +98,9 @@
     "title": "Watchy Premium",
     "subtitle": "From inventory to wealth management.",
     "features": {
-      "unlimited": "Unlimited collection and wishlist — 5 watches on the free plan",
+      "unlimited": "Unlimited collection and wishlist — 3 + 3 on the free plan",
       "dashboard": "Portfolio dashboard: value & capital gains",
       "weekly": "Market value updated weekly — monthly on the free plan",
-      "scans": "Unlimited photo recognitions",
       "vault": "Papers & receipts vault",
       "alerts": "Alerts when your watches move in value"
     },
@@ -272,7 +270,7 @@
     "guestSubtitle": "Create an account to secure your data",
     "emailLabel": "Email",
     "subscriptionLabel": "Subscription",
-    "freePlan": "Free · %{used}/%{limit} watches (collection + wishlist)",
+    "freePlan": "Free · %{watches}/%{watchLimit} collection · %{wishlist}/%{wishlistLimit} wishlist",
     "subscriptionTitle": "Premium subscription",
     "subscriptionActive": "Your subscription is active.",
     "manageInSettings": "Manage in Settings",
@@ -301,7 +299,10 @@
   },
   "premiumGate": {
     "limitTitle": "Limit reached",
-    "seePremium": "See Premium"
+    "seePremium": "See Premium",
+    "noSlotTitle": "No slot available",
+    "noSlotCollection": "Your collection is full (%{limit} watches). Upgrade to Premium for unlimited, or add a slot.",
+    "noSlotWishlist": "Your wishlist is full (%{limit} watches). Upgrade to Premium for unlimited, or add a slot."
   },
   "purchases": {
     "offerUnavailable": "Offer unavailable right now — please try again later."
@@ -321,8 +322,7 @@
   },
   "errors": {
     "PREMIUM_REQUIRED": "This feature requires Watchy Premium.",
-    "QUOTA_EXCEEDED": "Free plan limit reached — upgrade to Premium for unlimited watches.",
-    "SCAN_QUOTA_EXCEEDED": "Monthly photo recognition limit reached — go Premium for unlimited scans, or buy a scan pack.",
+    "QUOTA_EXCEEDED": "Slot limit reached for this list — upgrade to Premium for unlimited watches, or buy an extra slot.",
     "NOT_FOUND": "Not found.",
     "UNAUTHORIZED": "You must be signed in.",
     "ALREADY_IN_WISHLIST": "This watch is already in your wishlist.",
@@ -352,10 +352,10 @@
     "deleteHint": "Long-press a document to delete it."
   },
   "packs": {
-    "scanPack": "5-scan pack — %{price}",
-    "slotPack": "+3 slots — %{price}",
+    "watchSlot": "+1 collection slot — %{price}",
+    "wishlistSlot": "+1 wishlist slot — %{price}",
     "pendingTitle": "Purchase confirmed",
-    "pendingMessage": "Your credits will be available in a few seconds.",
+    "pendingMessage": "Your slot will be available in a few seconds.",
     "buyErrorTitle": "Purchase failed"
   }
 }

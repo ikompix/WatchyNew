@@ -184,7 +184,12 @@ export default function Profile() {
                   ? '…'
                   : isPremium
                     ? 'Premium'
-                    : t('profile.freePlan', { used: me.slotsUsed, limit: me.slotsLimit })}
+                    : t('profile.freePlan', {
+                        watches: me.watchCount,
+                        watchLimit: me.watchSlotsLimit,
+                        wishlist: me.wishlistCount,
+                        wishlistLimit: me.wishlistSlotsLimit,
+                      })}
               </ThemedText>
             </View>
             <SymbolView name="chevron.right" size={13} tintColor={Brand.inkSecondary} />

@@ -38,6 +38,8 @@ export type UpdateWatchDto = {
 export interface RecognizeWatchDto {
   imageBase64: string;
   mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  /** Pool visé par le scan — gate le quota d'emplacements correspondant (défaut : collection) */
+  target?: 'collection' | 'wishlist';
 }
 
 export interface ReferenceCandidate {
@@ -87,13 +89,19 @@ export interface MeResult {
   plan: Plan;
   watchCount: number;
   wishlistCount: number;
-  /** Emplacements occupés (collection + wishlist) — quota free combiné */
+  /** Limite d'emplacements collection (gratuits + achetés), null = illimité (premium) */
+  watchSlotsLimit: number | null;
+  /** Limite d'emplacements wishlist (gratuits + achetés), null = illimité (premium) */
+  wishlistSlotsLimit: number | null;
+  /** @deprecated Rétrocompat builds ≤ 1.1 (affichage combiné) — somme des deux pools */
   slotsUsed: number;
-  /** null = illimité (premium) */
+  /** @deprecated Rétrocompat builds ≤ 1.1 — somme des deux limites, null = illimité */
   slotsLimit: number | null;
+  /** @deprecated La feature crédits de scan n'existe plus — toujours 0 */
   scansUsed: number;
+  /** @deprecated Toujours null */
   scansLimit: number | null;
-  /** Crédits de scans achetés en pack (consommés après le mensuel gratuit) */
+  /** @deprecated Toujours 0 */
   scanCredits: number;
 }
 

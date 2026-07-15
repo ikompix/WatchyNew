@@ -5,11 +5,12 @@ import { db } from '../db/index.js';
 import { recognitionEvents, watchModels } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 import {
-  consumeScanCredit,
-  countScansThisMonth,
-  FREE_SCANS_PER_MONTH,
+  countScansToday,
+  countWatches,
+  countWishlist,
   getPlan,
-  getScanCredits,
+  getSlotLimits,
+  MAX_SCANS_PER_DAY,
 } from '../lib/entitlements.js';
 import { sniffImageMime, uploadWatchPhoto } from '../lib/storage.js';
 import { identifyWatch } from '../lib/recognition.js';
@@ -24,6 +25,8 @@ router.use('*', authMiddleware);
 const recognizeSchema = z.object({
   imageBase64: z.string().min(1),
   mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  // Pool visé par le scan — les builds ≤ 1.2 n'envoient rien : collection
+  target: z.enum(['collection', 'wishlist']).default('collection'),
 });
 
 async function findCatalogMatches(identification: {
@@ -74,29 +77,42 @@ router.post('/', async (c) => {
     );
   }
 
-  // Plan free : 5 reconnaissances/mois — bloqué avant tout upload, chaque
-  // scan coûte un appel Anthropic. Le mensuel gratuit s'épuise d'abord, puis
-  // les crédits achetés en pack (jamais l'inverse : les crédits ne brûlent
-  // pas tant qu'il reste du gratuit).
-  let usePaidCredit = false;
-  if (
-    (await getPlan(userId)) === 'free' &&
-    (await countScansThisMonth(userId)) >= FREE_SCANS_PER_MONTH
-  ) {
-    if ((await getScanCredits(userId)) > 0) {
-      usePaidCredit = true;
-    } else {
+  // La reconnaissance est illimitée tant qu'il reste un emplacement dans le
+  // pool visé — un scan n'a de sens que si l'ajout qui suit est possible.
+  // Bloqué avant tout upload (chaque scan coûte un appel Anthropic).
+  const target = parsed.data.target;
+  if ((await getPlan(userId)) === 'free') {
+    const limits = await getSlotLimits(userId);
+    const limit = target === 'wishlist' ? limits.wishlist : limits.collection;
+    const used =
+      target === 'wishlist' ? await countWishlist(userId) : await countWatches(userId);
+    if (limit != null && used >= limit) {
       return c.json<ApiResponse<never>>(
         {
           data: null,
           error: {
-            code: 'SCAN_QUOTA_EXCEEDED',
-            message: `Limite de ${FREE_SCANS_PER_MONTH} reconnaissances par mois atteinte — passez à Premium pour scanner sans limite, ou achetez un pack de scans.`,
+            code: 'QUOTA_EXCEEDED',
+            message: `Limite de ${limit} montres en ${target === 'wishlist' ? 'wishlist' : 'collection'} atteinte — passez à Premium pour l'illimité, ou ajoutez un emplacement.`,
           },
         },
         403
       );
     }
+  }
+
+  // Garde-fou anti-abus (premium compris) : plafond quotidien par utilisateur,
+  // plus robuste qu'un rate-limit IP (comptes multiples, NAT)
+  if ((await countScansToday(userId)) >= MAX_SCANS_PER_DAY) {
+    return c.json<ApiResponse<never>>(
+      {
+        data: null,
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Trop de reconnaissances aujourd’hui — réessayez demain.',
+        },
+      },
+      429
+    );
   }
 
   const { imageBase64 } = parsed.data;
@@ -106,10 +122,9 @@ router.post('/', async (c) => {
 
   let identification = null;
   try {
-    // Le quota compte les tentatives réelles (l'appel IA est facturé même s'il échoue ensuite)
+    // Le garde-fou quotidien compte les tentatives réelles (l'appel IA est
+    // facturé même s'il échoue ensuite)
     await db.insert(recognitionEvents).values({ userId });
-    // Au-delà du mensuel gratuit : le scan débite un crédit acheté
-    if (usePaidCredit) await consumeScanCredit(userId);
     identification = await identifyWatch(imageBase64, mimeType, userId, getLocale(c));
   } catch (err) {
     // Recognition is best-effort — the photo is already stored, the user falls back to manual entry

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { consumablePurchases, entitlements, scanCredits } from '../db/schema.js';
+import { consumablePurchases, entitlements } from '../db/schema.js';
 import type { ApiResponse } from '@watchy/types';
 
 // Monté SANS authMiddleware : RevenueCat s'authentifie par le header
@@ -12,11 +12,11 @@ const router = new Hono();
 // l'échéance — c'est l'event EXPIRATION qui repasse en free.
 const PREMIUM_EVENTS = new Set(['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION', 'PRODUCT_CHANGE']);
 
-// Packs consommables (aucun entitlement RC associé) : crédités par le webhook,
-// jamais via entitlements.plan
-const CONSUMABLES: Record<string, { kind: 'scans' | 'slots'; qty: number }> = {
-  watchy_scans_5: { kind: 'scans', qty: 5 },
-  watchy_slots_3: { kind: 'slots', qty: 3 },
+// Emplacements à l'unité (aucun entitlement RC associé) : crédités par le
+// webhook dans le compteur du pool, jamais via entitlements.plan
+const CONSUMABLES: Record<string, { pool: 'collection' | 'wishlist'; qty: number }> = {
+  watchy_watch_slot_1: { pool: 'collection', qty: 1 },
+  watchy_wishlist_slot_1: { pool: 'wishlist', qty: 1 },
 };
 
 interface RevenueCatEvent {
@@ -38,28 +38,32 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 async function applyConsumable(
   consumable: (typeof CONSUMABLES)[string],
   userId: string,
-  quantity: number,
-  isRefund: boolean
+  quantity: number
 ): Promise<void> {
-  if (consumable.kind === 'scans') {
-    await db
-      .insert(scanCredits)
-      .values({ userId, delta: quantity, reason: isRefund ? 'refund' : 'purchase' });
-  } else if (consumable.kind === 'slots') {
-    // Upsert sans toucher plan/expiresAt : un premium qui achète des slots ne
-    // perd pas son statut, et l'EXPIRATION d'un abonnement ne touche pas
-    // extraSlots — les emplacements achetés sont permanents
-    await db
-      .insert(entitlements)
-      .values({ userId, plan: 'free', extraSlots: Math.max(quantity, 0) })
-      .onConflictDoUpdate({
-        target: entitlements.userId,
-        set: {
-          extraSlots: sql`greatest(${entitlements.extraSlots} + ${quantity}, 0)`,
-          updatedAt: new Date(),
-        },
-      });
-  }
+  // Upsert sans toucher plan/expiresAt : un premium qui achète des slots ne
+  // perd pas son statut, et l'EXPIRATION d'un abonnement ne touche pas les
+  // extra_*_slots — les emplacements achetés sont permanents. quantity négatif
+  // = remboursement (CANCELLATION), plancher 0 via greatest.
+  const col =
+    consumable.pool === 'collection' ? entitlements.extraWatchSlots : entitlements.extraWishlistSlots;
+  await db
+    .insert(entitlements)
+    .values({
+      userId,
+      plan: 'free',
+      ...(consumable.pool === 'collection'
+        ? { extraWatchSlots: Math.max(quantity, 0) }
+        : { extraWishlistSlots: Math.max(quantity, 0) }),
+    })
+    .onConflictDoUpdate({
+      target: entitlements.userId,
+      set: {
+        ...(consumable.pool === 'collection'
+          ? { extraWatchSlots: sql`greatest(${col} + ${quantity}, 0)` }
+          : { extraWishlistSlots: sql`greatest(${col} + ${quantity}, 0)` }),
+        updatedAt: new Date(),
+      },
+    });
 }
 
 router.post('/revenuecat', async (c) => {
@@ -122,6 +126,9 @@ router.post('/revenuecat', async (c) => {
     if (event.type === 'NON_RENEWING_PURCHASE' || event.type === 'CANCELLATION') {
       const isRefund = event.type === 'CANCELLATION';
       const quantity = isRefund ? -consumable.qty : consumable.qty;
+      // Clé de repli sans event.id : collisionne pour deux achats successifs du
+      // même produit — RC envoie toujours un id en réel, le repli ne sert
+      // qu'aux tests manuels (qui doivent fournir un id distinct par achat)
       const rcEventId = event.id ?? `${event.type}:${appUserId}:${event.product_id}`;
       const [inserted] = await db
         .insert(consumablePurchases)
@@ -129,7 +136,7 @@ router.post('/revenuecat', async (c) => {
         .onConflictDoNothing({ target: consumablePurchases.rcEventId })
         .returning();
       if (inserted) {
-        await applyConsumable(consumable, appUserId, quantity, isRefund);
+        await applyConsumable(consumable, appUserId, quantity);
         console.log(
           `[revenuecat] ${appUserId} ${isRefund ? 'refund' : 'achat'} ${event.product_id} (${quantity > 0 ? '+' : ''}${quantity})`
         );

@@ -15,7 +15,7 @@
   "collection": {
     "title": "Collection",
     "lockedTitle": "Montre verrouillée",
-    "lockedMessage": "Passez à Premium pour y accéder à nouveau, ou libérez un emplacement en la supprimant.",
+    "lockedMessage": "Passez à Premium, ajoutez un emplacement, ou libérez-en un en la supprimant.",
     "deleteEllipsis": "Supprimer…",
     "deleteConfirmTitle": "Supprimer cette montre ?",
     "deleteConfirmMessage": "%{brand} %{model} sera retirée de votre collection. Cette action est définitive.",
@@ -39,7 +39,6 @@
     "title": "Wishlist",
     "marketPriceLabel": "cote",
     "watchLimitTitle": "Limite de montres atteinte",
-    "scanLimitTitle": "Limite de scans atteinte",
     "addErrorTitle": "Impossible",
     "analysisErrorTitle": "Analyse impossible",
     "photoPermissionTitle": "Permission refusée",
@@ -48,7 +47,7 @@
     "unknownModel": "Modèle inconnu",
     "notRecognizedTitle": "Montre non reconnue",
     "notRecognizedMessage": "La photo est attachée — cherchez le modèle ou saisissez-le manuellement.",
-    "lockedMessage": "Passez à Premium pour y accéder à nouveau, ou libérez un emplacement en la retirant.",
+    "lockedMessage": "Passez à Premium, ajoutez un emplacement, ou libérez-en un en la retirant.",
     "remove": "Retirer de la wishlist",
     "identifyByPhoto": "Identifier par photo (facultatif)",
     "photoAttached": "Photo attachée — elle illustrera cette montre.",
@@ -99,10 +98,9 @@
     "title": "Watchy Premium",
     "subtitle": "De l'inventaire à la gestion de patrimoine.",
     "features": {
-      "unlimited": "Collection et wishlist illimitées — 5 montres en gratuit",
+      "unlimited": "Collection et wishlist illimitées — 3 + 3 en gratuit",
       "dashboard": "Tableau de bord patrimonial : valeur & plus-value",
       "weekly": "Cote actualisée chaque semaine — mensuelle en gratuit",
-      "scans": "Reconnaissances photo illimitées",
       "vault": "Coffre-fort papiers & factures",
       "alerts": "Alertes quand la cote de vos montres bouge"
     },
@@ -272,7 +270,7 @@
     "guestSubtitle": "Créez un compte pour sécuriser vos données",
     "emailLabel": "Email",
     "subscriptionLabel": "Abonnement",
-    "freePlan": "Gratuit · %{used}/%{limit} montres (collection + wishlist)",
+    "freePlan": "Gratuit · %{watches}/%{watchLimit} collection · %{wishlist}/%{wishlistLimit} wishlist",
     "subscriptionTitle": "Abonnement Premium",
     "subscriptionActive": "Votre abonnement est actif.",
     "manageInSettings": "Gérer dans les Réglages",
@@ -301,7 +299,10 @@
   },
   "premiumGate": {
     "limitTitle": "Limite atteinte",
-    "seePremium": "Voir Premium"
+    "seePremium": "Voir Premium",
+    "noSlotTitle": "Pas d'emplacement disponible",
+    "noSlotCollection": "Votre collection est pleine (%{limit} montres). Passez à Premium pour l'illimité, ou ajoutez un emplacement.",
+    "noSlotWishlist": "Votre wishlist est pleine (%{limit} montres). Passez à Premium pour l'illimité, ou ajoutez un emplacement."
   },
   "purchases": {
     "offerUnavailable": "Offre indisponible pour le moment — réessayez plus tard."
@@ -338,10 +339,10 @@
     "deleteHint": "Appui long sur un document pour le supprimer."
   },
   "packs": {
-    "scanPack": "Pack 5 scans — %{price}",
-    "slotPack": "+3 emplacements — %{price}",
+    "watchSlot": "+1 emplacement collection — %{price}",
+    "wishlistSlot": "+1 emplacement wishlist — %{price}",
     "pendingTitle": "Achat confirmé",
-    "pendingMessage": "Vos crédits seront disponibles dans quelques secondes.",
+    "pendingMessage": "Votre emplacement sera disponible dans quelques secondes.",
     "buyErrorTitle": "Achat impossible"
   }
 }

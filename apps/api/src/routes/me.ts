@@ -17,15 +17,7 @@ import {
 import { authMiddleware } from '../middleware/auth.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { deleteUserDocuments } from '../lib/storage.js';
-import {
-  countScansThisMonth,
-  countWatches,
-  countWishlist,
-  FREE_SCANS_PER_MONTH,
-  getPlan,
-  getScanCredits,
-  getSlotLimit,
-} from '../lib/entitlements.js';
+import { countWatches, countWishlist, getPlan, getSlotLimits } from '../lib/entitlements.js';
 import type { ApiResponse, MeResult, NotificationPrefs, UserProfile } from '@watchy/types';
 
 const router = new Hono<{ Variables: { userId: string } }>();
@@ -34,13 +26,11 @@ router.use('*', authMiddleware);
 
 router.get('/', async (c) => {
   const userId = c.get('userId');
-  const [plan, watchCount, wishlistCount, scansUsed, scanCredits, slotsLimit] = await Promise.all([
+  const [plan, watchCount, wishlistCount, limits] = await Promise.all([
     getPlan(userId),
     countWatches(userId),
     countWishlist(userId),
-    countScansThisMonth(userId),
-    getScanCredits(userId),
-    getSlotLimit(userId),
+    getSlotLimits(userId),
   ]);
 
   return c.json<ApiResponse<MeResult>>({
@@ -48,11 +38,15 @@ router.get('/', async (c) => {
       plan,
       watchCount,
       wishlistCount,
+      watchSlotsLimit: limits.collection,
+      wishlistSlotsLimit: limits.wishlist,
+      // Aliases dépréciés pour les builds ≤ 1.1 (affichage combiné « x/y ») —
+      // la feature crédits de scan n'existe plus, valeurs neutres
       slotsUsed: watchCount + wishlistCount,
-      slotsLimit,
-      scansUsed,
-      scansLimit: plan === 'premium' ? null : FREE_SCANS_PER_MONTH,
-      scanCredits,
+      slotsLimit: limits.collection == null ? null : limits.collection + (limits.wishlist ?? 0),
+      scansUsed: 0,
+      scansLimit: null,
+      scanCredits: 0,
     },
     error: null,
   });

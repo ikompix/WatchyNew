@@ -21,7 +21,7 @@ import { useCollectionMarket, type WatchValuation } from '@/hooks/use-collection
 import { useMe } from '@/hooks/use-entitlement';
 import { usePortfolio } from '@/hooks/use-portfolio';
 import { Brand, Gutter, Spacing } from '@/constants/theme';
-import { apiErrorMessage } from '@/lib/premium-gate';
+import { apiErrorMessage, slotPackButton } from '@/lib/premium-gate';
 import { useT } from '@/lib/i18n';
 import { formatCurrency } from '@/lib/format';
 import { ThemedText } from '@/components/themed-text';
@@ -133,32 +133,38 @@ export default function Collection() {
   const deltaUp = (market.totalDeltaPct ?? 0) >= 0;
 
   // Élément verrouillé (free au-delà du quota) : pas d'accès à la fiche —
-  // repasser Premium ou libérer un emplacement
+  // repasser Premium, acheter +1 emplacement (déverrouille) ou en libérer un
   function openLocked(watch: Watch) {
-    Alert.alert(t('collection.lockedTitle'), t('collection.lockedMessage'), [
-      { text: t('premiumGate.seePremium'), onPress: () => router.push('/paywall') },
-      {
-        text: t('collection.deleteEllipsis'),
-        style: 'destructive',
-        onPress: () =>
-          Alert.alert(
-            t('collection.deleteConfirmTitle'),
-            t('collection.deleteConfirmMessage', { brand: watch.brand, model: watch.model }),
-            [
-              { text: t('common.cancel'), style: 'cancel' },
-              {
-                text: t('common.delete'),
-                style: 'destructive',
-                onPress: () =>
-                  deleteWatch.mutate(watch.id, {
-                    onError: (err) => Alert.alert(t('common.errorTitle'), apiErrorMessage(err)),
-                  }),
-              },
-            ]
-          ),
-      },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    // Le prix du pack vient du store (async) — sans prix, l'alerte garde ses
+    // boutons habituels
+    void (async () => {
+      const packBtn = await slotPackButton('collection');
+      Alert.alert(t('collection.lockedTitle'), t('collection.lockedMessage'), [
+        { text: t('premiumGate.seePremium'), onPress: () => router.push('/paywall') },
+        ...(packBtn ? [packBtn] : []),
+        {
+          text: t('collection.deleteEllipsis'),
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert(
+              t('collection.deleteConfirmTitle'),
+              t('collection.deleteConfirmMessage', { brand: watch.brand, model: watch.model }),
+              [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                  text: t('common.delete'),
+                  style: 'destructive',
+                  onPress: () =>
+                    deleteWatch.mutate(watch.id, {
+                      onError: (err) => Alert.alert(t('common.errorTitle'), apiErrorMessage(err)),
+                    }),
+                },
+              ]
+            ),
+        },
+        { text: t('common.cancel'), style: 'cancel' },
+      ]);
+    })();
   }
 
   function Header() {
@@ -186,7 +192,7 @@ export default function Collection() {
               <View style={styles.teaserTitleRow}>
                 <SymbolView name="lock.fill" size={13} tintColor={Brand.accent} />
                 <ThemedText type="small" themeColor="textSecondary">
-                  {t('collection.teaserTitle', { used: me!.slotsUsed, limit: me!.slotsLimit })}
+                  {t('collection.teaserTitle', { used: me!.watchCount, limit: me!.watchSlotsLimit })}
                 </ThemedText>
               </View>
               <ThemedText type="hero" style={styles.teaserValue}>

@@ -72,8 +72,8 @@ Vous pouvez supprimer votre compte depuis l'Application. Les modalités de suppr
 
 L'offre gratuite comprend, selon les fonctionnalités disponibles dans l'Application :
 
-- l'ajout de jusqu'à 5 montres au total, collection et liste de souhaits confondues ;
-- jusqu'à 5 identifications de montres par intelligence artificielle par mois ;
+- l'ajout de jusqu'à 3 montres en collection et jusqu'à 3 montres en liste de souhaits ;
+- des identifications de montres par intelligence artificielle, dans la limite des emplacements disponibles et d'un usage personnel normal et raisonnable ;
 - une actualisation indicative de la cote de chaque montre environ tous les 30 jours.
 
 L'abonnement Watchy Premium comprend, selon les fonctionnalités disponibles dans l'Application :
@@ -91,12 +91,12 @@ Les tarifs actuellement proposés sont les suivants :
 - Watchy Premium mensuel : 4,99 € TTC par mois ;
 - Watchy Premium annuel : 39,99 € TTC par an.
 
-Des achats à l'unité (« packs ») peuvent également être proposés dans l'Application, notamment :
+Des achats à l'unité peuvent également être proposés dans l'Application, notamment :
 
-- pack de 5 identifications par intelligence artificielle : 1,99 € TTC ;
-- pack de 3 emplacements supplémentaires (collection et liste de souhaits confondues) : 2,99 € TTC.
+- emplacement de collection supplémentaire : 1,99 € TTC ;
+- emplacement de liste de souhaits supplémentaire : 1,99 € TTC.
 
-Les packs sont des achats ponctuels, sans renouvellement automatique. Les crédits d'identification s'utilisent après épuisement du quota mensuel gratuit et n'expirent pas ; les emplacements supplémentaires sont acquis définitivement pour le compte. Une fois consommés, les crédits ne sont pas remboursables, sans préjudice des droits légaux applicables et des conditions de remboursement d'Apple.
+Ces achats sont ponctuels, sans renouvellement automatique. Les emplacements supplémentaires sont acquis définitivement pour le compte et ne sont pas remboursables une fois utilisés, sans préjudice des droits légaux applicables et des conditions de remboursement d'Apple.
 
 Un essai gratuit de 7 jours peut être proposé lorsque cela est indiqué au moment de la souscription.
 

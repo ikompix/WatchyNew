@@ -7,7 +7,7 @@ export type PlanId = 'monthly' | 'annual';
 export type PurchaseResult = 'done' | 'cancelled' | 'stub';
 export type RestoreResult = 'done' | 'none' | 'stub';
 /** Packs consommables (hors entitlement) — mêmes ids que RC/ASC et le webhook API. */
-export type ConsumableId = 'watchy_scans_5' | 'watchy_slots_3';
+export type ConsumableId = 'watchy_watch_slot_1' | 'watchy_wishlist_slot_1';
 
 type PurchasesModule = typeof import('react-native-purchases').default;
 type Offerings = import('react-native-purchases').PurchasesOfferings;

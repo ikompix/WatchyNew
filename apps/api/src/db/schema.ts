@@ -77,9 +77,11 @@ export const entitlements = pgTable('entitlements', {
   productId: text('product_id'),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   rcAppUserId: text('rc_app_user_id'),
-  // Emplacements achetés à l'unité (pack watchy_slots_3) — permanents : ils
-  // survivent à l'expiration d'un abonnement, indépendants de `plan`
-  extraSlots: integer('extra_slots').notNull().default(0),
+  // Emplacements achetés à l'unité (watchy_watch_slot_1 / watchy_wishlist_slot_1),
+  // un compteur par pool — permanents : ils survivent à l'expiration d'un
+  // abonnement, indépendants de `plan`
+  extraWatchSlots: integer('extra_watch_slots').notNull().default(0),
+  extraWishlistSlots: integer('extra_wishlist_slots').notNull().default(0),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -173,7 +175,7 @@ export const pushTokens = pgTable('push_tokens', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Achats consommables RevenueCat (packs de scans, emplacements) — une ligne
+// Achats consommables RevenueCat (emplacements à l'unité) — une ligne
 // par event RC, rc_event_id unique = idempotence (RC retente les webhooks)
 export const consumablePurchases = pgTable('consumable_purchases', {
   id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
@@ -182,16 +184,6 @@ export const consumablePurchases = pgTable('consumable_purchases', {
   productId: text('product_id').notNull(),
   // Négatif = remboursement
   quantity: integer('quantity').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
-
-// Ledger de crédits de scans : +N à l'achat d'un pack, -1 par scan consommé,
-// -N au remboursement. Solde = sum(delta).
-export const scanCredits = pgTable('scan_credits', {
-  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
-  userId: uuid('user_id').notNull(),
-  delta: integer('delta').notNull(),
-  reason: text('reason').notNull(), // 'purchase' | 'scan' | 'refund'
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

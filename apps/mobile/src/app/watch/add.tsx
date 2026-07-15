@@ -31,7 +31,8 @@ import { useCreateWatch } from '@/hooks/use-watches';
 import { useRecognizeWatch } from '@/hooks/use-recognition';
 import { useModelEstimate } from '@/hooks/use-market-prices';
 import { ModelSearch } from '@/components/model-search';
-import { apiErrorMessage, handlePremiumGate } from '@/lib/premium-gate';
+import { apiErrorMessage, blockIfPoolFull, handlePremiumGate } from '@/lib/premium-gate';
+import { useMe } from '@/hooks/use-entitlement';
 import { Brand, Fonts, Gutter, Radii, Spacing } from '@/constants/theme';
 import { useT } from '@/lib/i18n';
 import { formatCurrency } from '@/lib/format';
@@ -108,6 +109,7 @@ export default function AddWatch() {
   const insets = useSafeAreaInsets();
   const createWatch = useCreateWatch();
   const recognize = useRecognizeWatch();
+  const { data: me } = useMe();
   const [permission, requestPermission] = useCameraPermissions();
   const [step, setStep] = useState<Step>({ name: 'viewfinder' });
   const [cameraRef, setCameraRef] = useState<CameraView | null>(null);
@@ -131,7 +133,7 @@ export default function AddWatch() {
 
   function handleImage(base64: string, mimeType: 'image/jpeg' | 'image/png' | 'image/webp') {
     recognize.mutate(
-      { imageBase64: base64, mimeType },
+      { imageBase64: base64, mimeType, target: 'collection' },
       {
         onSuccess: (data) => {
           const identified = data.isWatch && (data.brand || data.model);
@@ -142,8 +144,8 @@ export default function AddWatch() {
           }
         },
         onError: (err) => {
-          // Quota de scans free épuisé → paywall ; la saisie manuelle reste ouverte
-          if (!handlePremiumGate(err, t('wishlist.scanLimitTitle'))) {
+          // Collection pleine → alerte premium / +1 slot ; la saisie manuelle reste ouverte
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'), 'collection')) {
             Alert.alert(t('wishlist.analysisErrorTitle'), apiErrorMessage(err));
           }
           setStep({ name: 'fallback', photoUrl: null });
@@ -154,6 +156,8 @@ export default function AddWatch() {
 
   async function takePicture() {
     if (!cameraRef || recognize.isPending) return;
+    // Collection pleine : on bloque avant la prise de vue (le scan coûte un appel IA)
+    if (blockIfPoolFull(me, 'collection')) return;
     const photo = await cameraRef.takePictureAsync({ base64: true, quality: 0.7 });
     if (!photo?.base64) return;
     setPhotoUri(photo.uri);
@@ -162,6 +166,7 @@ export default function AddWatch() {
 
   async function pickFromLibrary() {
     if (recognize.isPending) return;
+    if (blockIfPoolFull(me, 'collection')) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(t('wishlist.photoPermissionTitle'), t('wishlist.photoPermissionMessage'));
@@ -195,7 +200,7 @@ export default function AddWatch() {
       {
         onSuccess: (w) => router.replace(`/watch/${w.id}`),
         onError: (err) => {
-          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle')))
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'), 'collection'))
             Alert.alert(t('common.errorTitle'), apiErrorMessage(err));
         },
       }
@@ -215,7 +220,7 @@ export default function AddWatch() {
       {
         onSuccess: (w) => router.replace(`/watch/${w.id}`),
         onError: (err) => {
-          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle')))
+          if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'), 'collection'))
             Alert.alert(t('common.errorTitle'), apiErrorMessage(err));
         },
       }
@@ -344,7 +349,7 @@ export default function AddWatch() {
           {
             onSuccess: (w) => router.replace(`/watch/${w.id}`),
             onError: (err) => {
-              if (!handlePremiumGate(err, t('wishlist.watchLimitTitle')))
+              if (!handlePremiumGate(err, t('wishlist.watchLimitTitle'), 'collection'))
                 Alert.alert(t('common.errorTitle'), apiErrorMessage(err));
             },
           }

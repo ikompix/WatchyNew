@@ -36,6 +36,10 @@ app.use('*', cors({ origin: corsOrigins }));
 app.use('*', rateLimit({ windowMs: 60_000, max: 300, scope: 'global' }));
 // La création de comptes invités est publique : protection stricte anti-spam
 app.use('/auth/guest', rateLimit({ windowMs: 3_600_000, max: 5, scope: 'auth/guest' }));
+// La reconnaissance n'a plus de quota mensuel (gated par les slots) — chaque
+// scan coûte un appel Anthropic, double garde : IP ici + plafond/jour par
+// utilisateur dans la route
+app.use('/recognition', rateLimit({ windowMs: 3_600_000, max: 40, scope: 'recognition' }));
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 

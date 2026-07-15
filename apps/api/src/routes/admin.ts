@@ -51,8 +51,8 @@ const PRICE_MONTHLY = 4.99;
 const PRICE_ANNUAL = 39.99;
 // Packs consommables (prix ASC bruts)
 const CONSUMABLE_PRICES: Record<string, number> = {
-  watchy_scans_5: 1.99,
-  watchy_slots_3: 2.99,
+  watchy_watch_slot_1: 1.99,
+  watchy_wishlist_slot_1: 1.99,
 };
 
 router.post('/login', async (c) => {
@@ -265,7 +265,7 @@ router.get('/revenue', async (c) => {
         ['Conversion', `${conversion}%`, `${active.length} premium / ${accounts.length} comptes`],
         ['MRR estimé', eur(mrr), 'mensuel + annuel/12'],
         ['Revenu annualisé', eur(mrr * 12), 'ARR estimé'],
-        ['Packs vendus 30 j', String(packsSold30), 'scans + emplacements'],
+        ['Packs vendus 30 j', String(packsSold30), 'emplacements collection + wishlist'],
         ['Revenu packs 30 j', eur(packRevenue(packs30)), 'one-shot, hors MRR'],
       ])}
       ${packsAll.length ? `<section><h2>Consommables (depuis le lancement)</h2><table><tr><th>Produit</th><th>Ventes</th><th>Revenu brut</th></tr>${packRows}</table></section>` : ''}
@@ -446,7 +446,7 @@ router.get('/users/:id', async (c) => {
     ['Dernière connexion', fmtDate(u.last_sign_in_at)],
     ['Plan', `${plan}${ent?.source ? ` · ${esc(ent.source)}` : ''}${ent?.productId ? ` · ${esc(ent.productId)}` : ''}`],
     ['Expiration abonnement', ent?.expiresAt ? fmtDate(ent.expiresAt) : '—'],
-    ['Emplacements achetés', String(ent?.extraSlots ?? 0)],
+    ['Emplacements achetés', `${ent?.extraWatchSlots ?? 0} collection · ${ent?.extraWishlistSlots ?? 0} wishlist`],
     ['Source d\'acquisition', src ? esc(src.source) : '—'],
     ['Profil', profile
       ? esc([profile.expertise ? (EXPERTISE_LABELS[profile.expertise] ?? profile.expertise) : null, profile.ageRange, profile.city, profile.country].filter(Boolean).join(' · ')) || '—'

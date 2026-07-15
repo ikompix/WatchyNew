@@ -1,5 +1,5 @@
-// Smoke test wishlist post-pivot : quota COMBINÉ (collection + wishlist = 5 en
-// free), photo facultative, plus d'alertes. Aucun appel IA déclenché.
+// Smoke test wishlist : quotas SÉPARÉS (3 collection + 3 wishlist en free),
+// photo facultative, doublons. Aucun appel IA déclenché.
 //   npx tsx --env-file=.env scripts/wishlist-test.mts  (API sur :3000)
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
@@ -12,6 +12,10 @@ const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVI
 const anon = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, rt);
 const API = 'http://localhost:3000';
 const WEBHOOK_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET!;
+
+// Doivent suivre src/lib/entitlements.ts
+const FREE_WATCH_SLOTS = 3;
+const FREE_WISHLIST_SLOTS = 3;
 
 let failures = 0;
 const expect = (c: boolean, l: string) => { console.log(`${c ? '✓' : '✗'} ${l}`); if (!c) failures++; };
@@ -30,13 +34,14 @@ try {
   const modelA = models[0];
   const modelB = models2.find((m: { id: string }) => m.id !== modelA.id) ?? models[1];
 
-  // 1. Quota combiné : 3 montres + 2 items wishlist = 5 emplacements
-  for (let i = 1; i <= 3; i++) {
+  // 1. Quotas séparés : 3 montres ET 3 items wishlist tous acceptés (le
+  //    combiné d'avant aurait bloqué au-delà de 3 au total)
+  for (let i = 1; i <= FREE_WATCH_SLOTS; i++) {
     const r = await fetch(`${API}/watches`, {
       method: 'POST', headers,
       body: JSON.stringify({ brand: 'SmokeTest', model: `Montre ${i}` }),
     });
-    expect(r.status === 201, `montre ${i}/3 → 201 (reçu ${r.status})`);
+    expect(r.status === 201, `montre ${i}/${FREE_WATCH_SLOTS} → 201 (reçu ${r.status})`);
   }
   let res = await fetch(`${API}/wishlist`, {
     method: 'POST', headers,
@@ -49,25 +54,33 @@ try {
     method: 'POST', headers, body: JSON.stringify({ watchModelId: modelB.id }),
   });
   expect(res.status === 201, `wishlist 2 → 201 (reçu ${res.status})`);
+  res = await fetch(`${API}/wishlist`, {
+    method: 'POST', headers, body: JSON.stringify({ brand: 'SmokeTest', model: 'Wishlist 3' }),
+  });
+  expect(res.status === 201, `wishlist 3 → 201 (reçu ${res.status})`);
 
-  // 2. 6ᵉ emplacement refusé en free — côté wishlist ET côté collection
+  // 2. 4ᵉ de chaque pool refusé en free
   res = await fetch(`${API}/wishlist`, {
     method: 'POST', headers, body: JSON.stringify({ brand: 'X', model: 'Overflow' }),
   });
   body = await res.json();
   expect(res.status === 403 && body.error?.code === 'QUOTA_EXCEEDED',
-    `6ᵉ emplacement (wishlist) → 403 QUOTA_EXCEEDED (reçu ${res.status} ${body.error?.code})`);
+    `4ᵉ item wishlist → 403 QUOTA_EXCEEDED (reçu ${res.status} ${body.error?.code})`);
   res = await fetch(`${API}/watches`, {
     method: 'POST', headers, body: JSON.stringify({ brand: 'SmokeTest', model: 'Overflow' }),
   });
   body = await res.json();
   expect(res.status === 403 && body.error?.code === 'QUOTA_EXCEEDED',
-    `6ᵉ emplacement (montre) → 403 QUOTA_EXCEEDED (reçu ${res.status} ${body.error?.code})`);
+    `4ᵉ montre → 403 QUOTA_EXCEEDED (reçu ${res.status} ${body.error?.code})`);
 
-  // 3. /me expose le quota combiné
+  // 3. /me expose les deux pools + aliases rétrocompat
   const me = (await (await fetch(`${API}/me`, { headers })).json()).data;
-  expect(me.slotsUsed === 5 && me.slotsLimit === 5 && me.watchCount === 3 && me.wishlistCount === 2,
-    `GET /me → slots 5/5 (3 montres + 2 wishlist) (reçu ${JSON.stringify({ s: me.slotsUsed, l: me.slotsLimit, w: me.watchCount, wl: me.wishlistCount })})`);
+  expect(
+    me.watchCount === 3 && me.wishlistCount === 3 &&
+      me.watchSlotsLimit === FREE_WATCH_SLOTS && me.wishlistSlotsLimit === FREE_WISHLIST_SLOTS &&
+      me.slotsUsed === 6 && me.slotsLimit === 6,
+    `GET /me → 3/3 collection, 3/3 wishlist, alias 6/6 (reçu ${JSON.stringify({ w: me.watchCount, wl: me.wishlistCount, wsl: me.watchSlotsLimit, wlsl: me.wishlistSlotsLimit, s: me.slotsUsed, l: me.slotsLimit })})`
+  );
 
   // 4. Doublon wishlist refusé proprement
   res = await fetch(`${API}/wishlist`, {
@@ -77,7 +90,7 @@ try {
   expect(res.status === 409 && body.error?.code === 'ALREADY_IN_WISHLIST',
     `doublon → 409 (reçu ${res.status} ${body.error?.code})`);
 
-  // 5. Premium (webhook) → 6ᵉ emplacement accepté
+  // 5. Premium (webhook) → 4ᵉ item wishlist accepté
   await fetch(`${API}/webhooks/revenuecat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${WEBHOOK_SECRET}` },
@@ -86,11 +99,11 @@ try {
   res = await fetch(`${API}/wishlist`, {
     method: 'POST', headers, body: JSON.stringify({ brand: 'X', model: 'Overflow' }),
   });
-  expect(res.status === 201, `6ᵉ emplacement en premium → 201 (reçu ${res.status})`);
+  expect(res.status === 201, `4ᵉ item wishlist en premium → 201 (reçu ${res.status})`);
 
   // 6. GET wishlist : items avec photo/cote/modèle joint
   const list = (await (await fetch(`${API}/wishlist`, { headers })).json()).data;
-  expect(list.length === 3, `GET /wishlist → 3 items (reçu ${list?.length})`);
+  expect(list.length === 4, `GET /wishlist → 4 items (reçu ${list?.length})`);
   const withPhoto = list.find((i: { photoUrl: string | null }) => i.photoUrl);
   expect(!!withPhoto, 'item avec photoUrl présent dans la liste');
 } finally {

@@ -1,12 +1,16 @@
 # Release 1.2.0 — checklist et actions manuelles
 
 Périmètre : coffre-fort documents (premium), alertes de cote push (premium),
-pack de 5 scans (1,99 €), pack +3 emplacements (2,99 €). **Aucun appel IA
-nouveau** — les alertes se greffent sur les refreshs de cote déjà déclenchés
-(vérifié : table `ai_usage` vierge après le smoke test complet).
+packs **+1 emplacement collection** et **+1 emplacement wishlist** (1,99 €
+chacun). **Pivot du 2026-07-14** : quotas séparés 3 collection + 3 wishlist en
+free (fini le combiné), suppression des crédits de scan (`watchy_scans_5` et
+`watchy_slots_3` supprimés d'ASC) — la reconnaissance est gated par les slots
+du pool visé + plafond anti-abus 30 scans/jour. Migration 0018 (rename
+`extra_slots` → `extra_watch_slots`, + `extra_wishlist_slots`, drop
+`scan_credits`), appliquée automatiquement au démarrage du conteneur.
 
-Smoke test : `npx tsx --env-file=.env scripts/release-1-2-test.mts` (API lancée,
-24 checks ✓ le 2026-07-12).
+Smoke tests : `premium-test.mts`, `wishlist-test.mts`, `slot-packs-test.mts`
+(API lancée — tous verts le 2026-07-14).
 
 ## 1. Base de données (prod, avant déploiement)
 
@@ -24,8 +28,9 @@ Smoke test : `npx tsx --env-file=.env scripts/release-1-2-test.mts` (API lancée
 
 ## 3. RevenueCat
 
-1. Products → New : `watchy_scans_5` et `watchy_slots_3` (app iOS).
-   **Aucun entitlement attaché** (consommables — le webhook crédite, jamais
+1. Products : **supprimer** `watchy_scans_5` et `watchy_slots_3`, créer
+   `watchy_watch_slot_1` et `watchy_wishlist_slot_1` (app iOS). **Aucun
+   entitlement attaché** (consommables — le webhook crédite, jamais
    `entitlements.plan`).
 2. Vérifier au premier achat (Test Store puis sandbox) le **type d'event réel**
    reçu par le webhook : le code attend `NON_RENEWING_PURCHASE` (achat) et
@@ -35,15 +40,14 @@ Smoke test : `npx tsx --env-file=.env scripts/release-1-2-test.mts` (API lancée
 
 ## 4. App Store Connect
 
-1. ✅ **Fait via l'API ASC (2026-07-12, clé AHMP9LAZBJ)** — les 2 consommables
-   sont créés avec localisations FR/EN, prix (base FRA) et disponibilité
-   mondiale (175 territoires + futurs) :
-   - `watchy_scans_5` (id 6790026881) — 1,99 € · FR « 5 reconnaissances photo » / EN « 5 photo scans »
-   - `watchy_slots_3` (id 6790026813) — 2,99 € · FR « +3 emplacements » / EN « +3 collection slots »
+1. ✅ **Fait via l'API ASC (2026-07-14, clé AHMP9LAZBJ)** — les anciens
+   consommables sont supprimés, les 2 nouveaux créés avec localisations FR/EN,
+   prix 1,99 € (base FRA) et disponibilité mondiale (175 territoires + futurs) :
+   - `watchy_watch_slot_1` (id 6790858576) — FR « +1 emplacement collection » / EN « +1 collection slot »
+   - `watchy_wishlist_slot_1` (id 6790858548) — FR « +1 emplacement wishlist » / EN « +1 wishlist slot »
    **Reste (état MISSING_METADATA)** : uploader le **screenshot de review** de
    chaque produit (vraie capture de l'app montrant l'achat — ex. l'alerte
-   3 boutons, `xcrun simctl io booted screenshot`), puis joindre les 2 produits
-   à la soumission de la version 1.2.0.
+   3 boutons), puis joindre les 2 produits à la soumission de la version 1.2.0.
 2. Lier les 2 produits dans RevenueCat (App Store app config).
 3. App Privacy : la catégorie « Photos » couvre déjà les documents (contenu
    utilisateur lié à l'identité) — vérifier qu'aucune nouvelle déclaration
@@ -62,16 +66,20 @@ conformément à la règle « roadmap non vendue tant que non livrée ».
 
 ## 6. Tests manuels sur dev build (`npx expo run:ios`)
 
-- [ ] Achat `watchy_scans_5` (Test Store) → webhook (tunnel ngrok en local) →
-      `/me.scanCredits = 5` visible, 6ᵉ scan passe.
-- [ ] Achat `watchy_slots_3` → 6ᵉ montre passe, les éléments verrouillés se
-      déverrouillent d'eux-mêmes.
+- [ ] Achat `watchy_watch_slot_1` (Test Store) → webhook (tunnel ngrok en
+      local) → la 4ᵉ montre passe, la carte verrouillée se déverrouille
+      d'elle-même.
+- [ ] Achat `watchy_wishlist_slot_1` → le 4ᵉ item wishlist passe ; vérifier que
+      la limite collection ne bouge pas (pools indépendants).
+- [ ] Collection pleine → bouton photo bloqué AVANT la caméra (alerte « Pas
+      d'emplacement disponible » avec +1 slot) ; idem scan wishlist.
 - [ ] Alerte de cote : compte premium + montre avec cote, forcer un refresh avec
       variation ≥ 5 % → push reçu dans la langue de l'appareil, tap → fiche.
 - [ ] Toggle « Alertes de cote » dans le profil (opt-out → plus d'alerte).
 - [ ] Upload / suppression de document sur une fiche montre ; compte free →
       carte verrouillée → paywall.
-- [ ] Remboursement sandbox d'un pack → crédits repris (`GREATEST(x-n, 0)`).
+- [ ] Remboursement sandbox d'un pack → slot repris (`GREATEST(x-n, 0)`), la
+      montre la plus récente se re-verrouille.
 
 ## 7. Back office
 

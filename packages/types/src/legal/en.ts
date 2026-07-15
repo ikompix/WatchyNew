@@ -71,8 +71,8 @@ You can delete your account from within the Application. The terms of deletion a
 
 The free offer includes, depending on the features available in the Application:
 
-- adding up to 5 watches in total, collection and wishlist combined;
-- up to 5 watch identifications by artificial intelligence per month;
+- adding up to 3 watches to the collection and up to 3 watches to the wishlist;
+- watch identifications by artificial intelligence, within the limit of available slots and of normal and reasonable personal use;
 - an indicative update of each watch's market value approximately every 30 days.
 
 The Watchy Premium subscription includes, depending on the features available in the Application:
@@ -90,12 +90,12 @@ The prices currently offered are as follows:
 - Watchy Premium monthly: €4.99 incl. VAT per month;
 - Watchy Premium annual: €39.99 incl. VAT per year.
 
-One-time purchases ("packs") may also be offered in the Application, in particular:
+One-time purchases may also be offered in the Application, in particular:
 
-- pack of 5 artificial-intelligence identifications: €1.99 incl. VAT;
-- pack of 3 additional slots (collection and wishlist combined): €2.99 incl. VAT.
+- additional collection slot: €1.99 incl. VAT;
+- additional wishlist slot: €1.99 incl. VAT.
 
-Packs are one-time purchases with no automatic renewal. Identification credits are used after the free monthly quota is exhausted and do not expire; additional slots are permanently acquired for the account. Once consumed, credits are non-refundable, without prejudice to applicable statutory rights and Apple's refund policies.
+These are one-time purchases with no automatic renewal. Additional slots are permanently acquired for the account and are non-refundable once used, without prejudice to applicable statutory rights and Apple's refund policies.
 
 A 7-day free trial may be offered when indicated at the time of subscription.
 

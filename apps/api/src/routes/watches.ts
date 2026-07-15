@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '../db/index.js';
 import { watches, watchDocuments } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { countSlots, getLockedIds, getPlan, getSlotLimit } from '../lib/entitlements.js';
+import { countWatches, getLockedIds, getPlan, getSlotLimits } from '../lib/entitlements.js';
 import { nicknameForReference } from '../lib/nickname-map.js';
 import {
   deleteDocuments,
@@ -86,18 +86,18 @@ router.post('/', async (c) => {
     );
   }
 
-  // Plan free : 5 emplacements EN TOUT (collection + wishlist), plus les
-  // emplacements achetés à l'unité. L'existant au-delà de la limite n'est
-  // jamais supprimé — il est verrouillé en lecture (voir getLockedIds), la
-  // suppression restant possible pour libérer un slot.
-  const slotLimit = await getSlotLimit(userId);
-  if (slotLimit != null && (await countSlots(userId)) >= slotLimit) {
+  // Plan free : 3 emplacements de collection, plus ceux achetés à l'unité.
+  // L'existant au-delà de la limite n'est jamais supprimé — il est verrouillé
+  // en lecture (voir getLockedIds), la suppression restant possible pour
+  // libérer un slot.
+  const { collection: slotLimit } = await getSlotLimits(userId);
+  if (slotLimit != null && (await countWatches(userId)) >= slotLimit) {
     return c.json<ApiResponse<never>>(
       {
         data: null,
         error: {
           code: 'QUOTA_EXCEEDED',
-          message: `Limite de ${slotLimit} montres atteinte (collection + wishlist) — passez à Premium pour l'illimité, ou ajoutez des emplacements.`,
+          message: `Limite de ${slotLimit} montres en collection atteinte — passez à Premium pour l'illimité, ou ajoutez un emplacement.`,
         },
       },
       403

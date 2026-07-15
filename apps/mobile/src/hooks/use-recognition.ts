@@ -9,7 +9,6 @@ export function useRecognizeWatch() {
       const res = await apiPost<RecognizeWatchResult>('/recognition', dto);
       return unwrap(res);
     },
-    // Chaque scan consomme le quota mensuel free affiché par /me
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
   });
 }
