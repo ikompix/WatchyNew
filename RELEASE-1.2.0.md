@@ -52,11 +52,10 @@ Smoke tests : `premium-test.mts`, `wishlist-test.mts`, `slot-packs-test.mts`
 3. App Privacy : la catégorie « Photos » couvre déjà les documents (contenu
    utilisateur lié à l'identité) — vérifier qu'aucune nouvelle déclaration
    n'est requise.
-4. Version 1.2.0 → notes de version :
-   - **FR** :
-     > Watchy Premium s'enrichit : coffre-fort papiers & factures sur chaque montre, et alertes quand la cote de vos montres bouge. Nouveau : packs de scans et d'emplacements supplémentaires sans abonnement.
-   - **EN** :
-     > Watchy Premium grows: a papers & receipts vault on every watch, plus alerts when your watches move in value. New: scan packs and extra slots without a subscription.
+4. ✅ Version 1.2.0 créée via l'API ASC (2026-07-15, id `840053e4`) avec la note
+   FR (seule locale de la fiche) — texte corrigé post-pivot (plus de « packs de
+   scans ») :
+   > Watchy Premium s'enrichit : coffre-fort papiers & factures sur chaque montre, et alertes quand la cote de vos montres bouge. Nouveau : packs d'emplacements supplémentaires (collection et wishlist) sans abonnement.
 
 ## 5. Paywall / abonnement (rien à faire)
 
@@ -87,7 +86,35 @@ conformément à la règle « roadmap non vendue tant que non livrée ».
   consommables.
 - /admin/push : KPI « Alertes de cote 30 j » (envois automatiques premium).
 
-## 8. Reste à faire (hors release, hérité de 1.1.0)
+## 8. Rejet 3.1.1 du 2026-07-15 et resoumission
+
+Les 2 IAP soumis seuls ont été rejetés (Guideline 3.1.1 : les consommables
+changent le business model → Apple doit vérifier l'achat dans un binaire).
+Correctif : soumettre la version 1.2.0 + build + IAP **ensemble**, ce qui a
+imposé de déployer toute la 1.2 en prod AVANT validation Apple (le binaire
+parle à l'API prod ; l'achat doit être fonctionnel pendant la review).
+
+Fait le 2026-07-15 :
+- 1.2 déployée en prod : commit `8ad87af` poussé, migrations 0013→0018 passées
+  au démarrage Railway, `release_1_2.sql` et bucket `watch-documents` déjà en
+  place depuis le 2026-07-12. Vérifié sur prod : `/me` renvoie les nouveaux
+  champs, 4ᵉ montre/wishlist → 403 QUOTA_EXCEEDED.
+- Compte review dédié packs (le démo est premium, il ne voit pas l'alerte) :
+  **review-packs@watchy-app.com / WatchyPacks2026!** — free, 3 montres +
+  3 wishlist (recréable : pattern dans l'historique, dérivé de demo-seed.mts).
+- Build 11 (1.2.0) EAS terminé ; la soumission EAS restait coincée en file
+  (`IN_QUEUE` 35 min) → annulée, .ipa téléchargé et uploadé direct via
+  `xcrun altool` + clé ASC (la clé est aussi dans
+  `~/.appstoreconnect/private_keys/`).
+- Version 1.2.0 + build 11 **soumis — WAITING_FOR_REVIEW** (review submission
+  `f433a929`), notes de review EN avec le flux d'achat et les 2 comptes.
+- IAP resoumis via `inAppPurchaseSubmissions` (201, endpoint en écriture
+  seule) + notes de review par produit mises à jour. ⚠️ L'état API restait
+  `DEVELOPER_ACTION_NEEDED` après la soumission — vérifier dans l'UI ASC que
+  les 2 produits sont bien « En attente de vérification », sinon les soumettre
+  depuis la fiche produit ou la section IAP de la page de version.
+
+## 9. Reste à faire (hors release, hérité de 1.1.0)
 
 - Médiateur de la consommation + téléphone pro → `packages/types/src/legal/*.ts`.
 - Rotation des secrets prod ; suppression des services Railway en doublon ;
